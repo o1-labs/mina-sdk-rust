@@ -172,34 +172,7 @@ impl MinaClient {
                         continue;
                     }
                     match resp.json::<Value>().await {
-                        Ok(body) => {
-                            if let Some(errors) = body.get("errors").and_then(|e| e.as_array()) {
-                                let entries: Vec<GraphqlErrorEntry> = errors
-                                    .iter()
-                                    .map(|e| GraphqlErrorEntry {
-                                        message: e
-                                            .get("message")
-                                            .and_then(|m| m.as_str())
-                                            .unwrap_or("unknown error")
-                                            .to_string(),
-                                    })
-                                    .collect();
-                                let messages = entries
-                                    .iter()
-                                    .map(|e| e.message.as_str())
-                                    .collect::<Vec<_>>()
-                                    .join("; ");
-                                return Err(Error::Graphql {
-                                    query_name: query_name.to_string(),
-                                    messages,
-                                    errors: entries,
-                                });
-                            }
-                            return Ok(body
-                                .get("data")
-                                .cloned()
-                                .unwrap_or(Value::Object(Default::default())));
-                        }
+                        Ok(body) => return graphql_data(body, query_name),
                         Err(e) => {
                             warn!(query_name, attempt, error = %e, "failed to parse response");
                             last_err = Some(e);
@@ -595,4 +568,35 @@ impl<'a> QueryBuilder<'a> {
             .execute_query(self.query, self.variables, self.name.unwrap_or("custom"))
             .await
     }
+}
+
+/// Return the `data` field of a GraphQL response body, or [`Error::Graphql`]
+/// when the body carries an `errors` array. Shared by every client in the crate.
+pub(crate) fn graphql_data(body: Value, query_name: &str) -> Result<Value> {
+    if let Some(errors) = body.get("errors").and_then(|e| e.as_array()) {
+        let entries: Vec<GraphqlErrorEntry> = errors
+            .iter()
+            .map(|e| GraphqlErrorEntry {
+                message: e
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("unknown error")
+                    .to_string(),
+            })
+            .collect();
+        let messages = entries
+            .iter()
+            .map(|e| e.message.as_str())
+            .collect::<Vec<_>>()
+            .join("; ");
+        return Err(Error::Graphql {
+            query_name: query_name.to_string(),
+            messages,
+            errors: entries,
+        });
+    }
+    Ok(body
+        .get("data")
+        .cloned()
+        .unwrap_or(Value::Object(Default::default())))
 }

@@ -112,6 +112,14 @@
 //! | [`MinaClient::set_snark_work_fee`] | Set SNARK work fee |
 //! | [`MinaClient::execute_query`] | Run arbitrary GraphQL |
 //!
+//! # ITN server (feature `itn`)
+//!
+//! With the `itn` feature, [`itn::ItnClient`] talks to the daemon's second
+//! GraphQL server (`--itn-graphql-port`, `ITN_FEATURES=1`), which load testing
+//! tools use to schedule transactions, read internal logs, change connection
+//! gating and stop the daemon. Its requests are signed with an ed25519
+//! [`itn::ItnKey`]; see the [`itn`] module for the protocol.
+//!
 //! # Examples
 //!
 //! See the [`examples/`](https://github.com/MinaProtocol/mina-sdk-rust/tree/master/examples)
@@ -128,6 +136,9 @@
 mod client;
 mod currency;
 pub mod error;
+#[cfg(feature = "itn")]
+#[cfg_attr(docsrs, doc(cfg(feature = "itn")))]
+pub mod itn;
 pub mod queries;
 mod types;
 

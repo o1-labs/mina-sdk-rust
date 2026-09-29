@@ -29,13 +29,19 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
 
+      - name: Clippy (all features)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
       - name: Build docs
-        run: cargo doc --no-deps
+        run: cargo doc --no-deps --all-features
         env:
           RUSTDOCFLAGS: -D warnings
 
       - name: Run unit tests
         run: cargo test --lib --tests -- --skip integration
+
+      - name: Run unit tests (all features)
+        run: cargo test --all-features --lib --tests -- --skip integration
 
   deny:
     name: Dependency audit
@@ -60,7 +66,8 @@ jobs:
 
       - name: Generate coverage
         run: >
-          cargo tarpaulin --lib --test client_tests
+          cargo tarpaulin --all-features --lib --test client_tests
+          --test itn_client_tests --test itn_schema_tests
           --out lcov --skip-clean
           --exclude-files 'examples/*'
           --exclude-files 'tests/*'

@@ -16,7 +16,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Run tests
-        run: cargo test --lib --tests -- --skip integration
+        run: cargo test --all-features --lib --tests -- --skip integration
 
   publish-dry-run:
     runs-on: ubuntu-latest

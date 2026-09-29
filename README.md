@@ -113,6 +113,48 @@ println!("{}", a.nanomina());   // 10000000000
 assert!(a > b);
 ```
 
+### ITN server (feature `itn`)
+
+A daemon started with `ITN_FEATURES=1`, `--itn-graphql-port` and `--itn-keys`
+serves a second GraphQL API, which load testing tools use. `ItnClient` signs
+each request with an ed25519 `ItnKey` whose public half must be in
+`--itn-keys`, and it handles the daemon's sequence numbers (a new `auth` after
+a daemon restart, HTTP 412).
+
+```toml
+mina-sdk = { version = "0.2", features = ["itn"] }
+```
+
+```rust
+use mina_sdk::itn::{ItnClient, ItnKey, PaymentsDetails};
+
+let key = ItnKey::from_base64(&std::fs::read_to_string("itn_sk")?)?;
+println!("start the daemon with --itn-keys {}", key.public_key_base64());
+
+let itn = ItnClient::new("http://127.0.0.1:3086/graphql", key);
+let logs = itn.internal_logs(0).await?;
+let handle = itn.schedule_payments(&PaymentsDetails { /* ... */ }).await?;
+itn.stop_scheduled_transactions(&handle).await?;
+```
+
+| Method | GraphQL |
+|--------|---------|
+| `auth()` | `auth` (server UUID, sequence number, peer ID, block producer) |
+| `slots_won()` | `slotsWon` |
+| `internal_logs(start)` / `flush_internal_logs(end)` | `internalLogs` / `flushInternalLogs` |
+| `schedule_payments(&PaymentsDetails)` | `schedulePayments` |
+| `schedule_zkapp_commands(&ZkappCommandsDetails)` | `scheduleZkappCommands` |
+| `stop_scheduled_transactions(handle)` | `stopScheduledTransactions` |
+| `update_gating(&GatingUpdate)` | `updateGating` |
+| `stop_daemon(delay, clean)` | `stopDaemon` |
+| `set_zkapp_command_limit(limit)` | `zkAppCommandLimit` |
+| `execute_query(query, vars, name)` | any document, sequenced and signed |
+
+A sequenced request is never repeated after a transport error, because the
+daemon may already have run it. `schema/itn_graphql_schema.json` is an
+introspection dump of the ITN schema (daemon `4.0.0-6965b50` devnet), and a
+test checks every document in `mina_sdk::itn::queries` against it.
+
 ## Examples
 
 Runnable programs live in [`examples/`](examples/):
@@ -126,6 +168,7 @@ Runnable programs live in [`examples/`](examples/):
 | `custom_query` | `cargo run --example custom_query` | yes |
 | `error_handling` | `cargo run --example error_handling` | yes |
 | `currency_operations` | `cargo run --example currency_operations` | no |
+| `itn_internal_logs` | `cargo run --example itn_internal_logs --features itn` | yes, with ITN |
 
 ## Development
 
@@ -149,6 +192,15 @@ docker run --rm -d -p 8080:8080 -p 8181:8181 -p 3085:3085 \
 # Wait for the network to sync, then:
 MINA_GRAPHQL_URI=http://127.0.0.1:8080/graphql \
   cargo test --test integration_tests -- --test-threads=1
+```
+
+The ITN integration tests need a daemon with `ITN_FEATURES=1`,
+`--itn-graphql-port 3086`, `--itn-keys <public key>` and, for non-empty
+internal logs, `--internal-tracing`:
+
+```bash
+MINA_ITN_URI=http://127.0.0.1:3086/graphql MINA_ITN_KEY=<base64 seed> \
+  cargo test --features itn --test itn_integration_tests -- --test-threads=1
 ```
 
 ## Troubleshooting

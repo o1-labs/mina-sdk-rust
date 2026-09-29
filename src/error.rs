@@ -35,6 +35,23 @@ pub enum Error {
     /// Account not found.
     #[error("account not found: {0}")]
     AccountNotFound(String),
+
+    /// The ITN server rejected the request signature (HTTP 401): the
+    /// signature is wrong, or the key's public half is not in the daemon's
+    /// `--itn-keys`.
+    #[error("ITN server rejected the signature of {query_name} (HTTP 401); is the public key in --itn-keys?")]
+    ItnUnauthorized { query_name: String },
+
+    /// The ITN server still rejected the sequence information (HTTP 412)
+    /// after a new `auth` handshake.
+    #[error(
+        "ITN server rejected the sequence number of {query_name} again after a new auth (HTTP 412)"
+    )]
+    ItnSequencing { query_name: String },
+
+    /// An ITN key could not be decoded.
+    #[error("invalid ITN key: {0}")]
+    InvalidItnKey(String),
 }
 
 /// A single error entry from a GraphQL response.

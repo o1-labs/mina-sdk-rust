@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Feature `itn`: `mina_sdk::itn::ItnClient` for the daemon's ITN GraphQL
+  server (`--itn-graphql-port`), with ed25519 request signing (`ItnKey`),
+  the `auth` handshake, sequence numbers and recovery from HTTP 412. It
+  covers every field of `schema_itn`: `auth`, `slotsWon`, `internalLogs`,
+  `flushInternalLogs`, `schedulePayments`, `scheduleZkappCommands`,
+  `stopScheduledTransactions`, `updateGating`, `stopDaemon`,
+  `zkAppCommandLimit`.
+- `schema/itn_graphql_schema.json`, an introspection dump of the ITN schema,
+  and an offline test of the ITN documents against it.
+- Example `itn_internal_logs`.
+- Error variants `ItnUnauthorized`, `ItnSequencing` and `InvalidItnKey`.
+  Code that matches `Error` exhaustively must add them.
+
 ## [0.2.0-alpha.1] - 2026-04-18
 
 ### Added
