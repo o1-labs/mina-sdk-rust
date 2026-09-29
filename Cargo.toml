@@ -17,6 +17,11 @@ exclude = [".github/", "scripts/", "schema/", "tests/integration_tests.rs"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[features]
+# Client for the daemon's ITN GraphQL server (`--itn-graphql-port`), whose
+# requests are signed with an ed25519 key. See `mina_sdk::itn`.
+itn = ["dep:ed25519-dalek", "dep:base64", "dep:getrandom", "tokio/sync"]
+
 [dependencies]
 reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
@@ -24,8 +29,15 @@ serde_json = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["rt", "time"] }
 tracing = "0.1"
+ed25519-dalek = { version = "2", optional = true }
+base64 = { version = "0.22", optional = true }
+getrandom = { version = "0.2", optional = true }
 
 [dev-dependencies]
 wiremock = "0.6"
 tokio = { version = "1", features = ["full", "test-util"] }
 rand = "0.10"
+
+[[example]]
+name = "itn_internal_logs"
+required-features = ["itn"]
