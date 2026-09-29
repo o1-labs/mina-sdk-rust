@@ -108,9 +108,10 @@ pub struct ZkappCommandsDetails {
     pub num_zkapps_to_deploy: i64,
     /// Private keys (base58) of the fee payers, which also create the accounts.
     pub fee_payers: Vec<String>,
-    /// Load a custom (non-default) owned token. Sent only when set: released
-    /// daemons (for example 4.0.0) do not have this field and reject any
-    /// input that contains it.
+    /// Load a custom (non-default) owned token. Only an unreleased daemon
+    /// branch has this field; released daemons (for example 4.0.0) ignore it,
+    /// because ocaml-graphql-server does not check input fields that its
+    /// schema does not declare. It is sent only when set.
     pub non_default_token: Option<bool>,
 }
 
