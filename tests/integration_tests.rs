@@ -282,9 +282,19 @@ async fn test_genesis_block_and_block_lookups() {
     assert!(!genesis.state_hash.is_empty());
     assert!(!genesis.staking_epoch.ledger_hash.is_empty());
 
-    // The best tip is always in the transition frontier, so it can be read
-    // back by state hash and by height.
-    let tip = client.get_best_chain(Some(1)).await.unwrap().remove(0);
+    // The best tip is in the transition frontier, so it can be read back by
+    // state hash and by height. The daemon does not find the frontier's root
+    // by height, so wait until the tip is above the root of a new chain
+    // (height 1).
+    let mut tip = client.get_best_chain(Some(1)).await.unwrap().remove(0);
+    for _ in 0..60 {
+        if tip.height > 1 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(5)).await;
+        tip = client.get_best_chain(Some(1)).await.unwrap().remove(0);
+    }
+    assert!(tip.height > 1, "no block after the genesis block");
     let by_hash = client
         .get_block(BlockRef::StateHash(tip.state_hash.clone()))
         .await
