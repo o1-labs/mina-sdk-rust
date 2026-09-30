@@ -40,6 +40,9 @@ QUERIES_PATH = REPO_ROOT / "src" / "queries.rs"
 # the corresponding accounts, but the schema layer will still validate.
 SENTINEL_SENDER = "B62qpRzFVjd56FiHnNfxokVbcHMQLT119My1FEdSq8ss7KomLiSZcan"
 SENTINEL_RECEIVER = "B62qrPN5Y5yq8kGE3FbVKbGTdTAJNdtNtB5sNVpxyRwWGcDEhpMzc8g"
+# A syntactically valid Mina signature (base58) and an empty memo.
+SENTINEL_SIGNATURE = "7mWxjLYgbJUkZNcGouvhVj5tJ8yu9hoexb9ntvPK8t5LHqzmrL6QJjjKtf5SgmxB4QWkDw7qoMMbbNGtHVpsbJHPyTy2EzRQ"
+SENTINEL_MEMO = "E4YM2vTHhWEg66xpj52JErHUBU4pZ1yageL4TVDDpTTSsv8mK6YaH"
 
 INTROSPECTION_QUERY = """
 query IntrospectionQuery {
@@ -336,6 +339,26 @@ def sentinel_for_type(type_name: str) -> Any:
             "to": SENTINEL_RECEIVER,
             "fee": "1000000000",
         },
+        "ID": "1",
+        "UnlockInput": {"publicKey": SENTINEL_SENDER, "password": "sentinel"},
+        # A structurally complete command with a sentinel fee payer and an
+        # empty account-update list; the daemon rejects it at run time
+        # (signature), which is not drift.
+        "SendZkappInput": {
+            "zkappCommand": {
+                "feePayer": {
+                    "body": {
+                        "publicKey": SENTINEL_SENDER,
+                        "fee": "1000000000",
+                        "validUntil": None,
+                        "nonce": "0",
+                    },
+                    "authorization": SENTINEL_SIGNATURE,
+                },
+                "accountUpdates": [],
+                "memo": SENTINEL_MEMO,
+            }
+        },
         "SetSnarkWorkerInput": {"publicKey": SENTINEL_SENDER},
         "SetSnarkWorkFee": {"fee": "1000000000"},
     }.get(base, None)
@@ -346,7 +369,10 @@ def build_variables(decls: list[tuple[str, str]]) -> dict[str, Any] | None:
     for name, typ in decls:
         v = sentinel_for_type(typ)
         if v is None:
-            return None
+            # A nullable variable is valid as null (the SDKs send it so when
+            # the caller omits it); only a required one needs a sentinel.
+            if typ.strip().endswith("!"):
+                return None
         vars[name] = v
     return vars
 

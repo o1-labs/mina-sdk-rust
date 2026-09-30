@@ -76,25 +76,40 @@ let client = MinaClient::with_config(ClientConfig {
 
 Full API documentation is available on [docs.rs](https://docs.rs/mina-sdk).
 
+The Rust, Go and JS SDKs have the same API. [`spec/SPEC.md`](spec/SPEC.md)
+and [`spec/operations.graphql`](spec/operations.graphql) define it, and a test
+checks that this SDK's queries are the specification's documents.
+
 ### Queries
 
 | Method | Description |
 |--------|-------------|
 | `get_sync_status()` | Node sync status (Synced, Bootstrap, etc.) |
-| `get_daemon_status()` | Comprehensive daemon status |
+| `get_daemon_status()` | Daemon status: chain length, peers, addresses, block production keys |
+| `get_daemon_metrics()` | Transaction and snark pool metrics, block production delay |
 | `get_network_id()` | Network identifier |
-| `get_account(public_key, token_id)` | Account balance, nonce, delegate |
-| `get_best_chain(max_length)` | Recent blocks from best chain |
+| `get_account(public_key, token_id)` | Balance, nonce, delegate, timing, permissions, zkApp state |
+| `get_best_chain(max_length)` | Recent blocks from the best chain |
+| `get_genesis_block()` | The genesis block |
+| `get_block(BlockRef)` | One block, by state hash or height |
 | `get_peers()` | Connected peers |
-| `get_pooled_user_commands(public_key)` | Pending transactions |
+| `get_pooled_user_commands(public_key)` | Pending payments and delegations |
+| `get_pooled_zkapp_commands(public_key)` | Pending zkApp commands |
+| `get_transaction_status(TransactionRef)` | `Pending`, `Included` or `Unknown` |
+| `get_genesis_constants()` | Genesis timestamp, coinbase, account creation fee |
+| `get_tracked_accounts()` | Accounts in the daemon's keystore |
+| `get_snark_pool()` | Completed snark work |
+| `get_fork_config()` | The daemon's fork configuration (JSON) |
 | `execute_query(query, variables, name)` | Run a custom GraphQL query |
 
 ### Mutations
 
 | Method | Description |
 |--------|-------------|
-| `send_payment(Payment)` | Send a payment |
-| `send_delegation(Delegation)` | Delegate stake |
+| `send_payment(Payment)` | Send a payment; `Payment::signature` for one made outside the daemon |
+| `send_delegation(Delegation)` | Delegate stake; `Delegation::signature` likewise |
+| `send_zkapp(command)` | Send a signed zkApp command (JSON) |
+| `unlock_account(public_key, password)` | Unlock a keystore account |
 | `set_snark_worker(public_key)` | Set/unset SNARK worker |
 | `set_snark_work_fee(fee)` | Set SNARK work fee |
 

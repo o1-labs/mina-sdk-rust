@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- The common API of the Rust, Go and JS SDKs: `spec/SPEC.md` and
+  `spec/operations.graphql`. `tests/spec_tests.rs` checks that the query
+  strings are the specification's documents and that the documents are valid
+  against `schema/graphql_schema.json`.
+- Methods of the common API that this SDK did not have: `get_daemon_metrics`,
+  `get_genesis_block`, `get_block` (`BlockRef`), `get_pooled_zkapp_commands`,
+  `get_transaction_status` (`TransactionRef`), `get_genesis_constants`,
+  `get_tracked_accounts`, `get_snark_pool`, `get_fork_config`, `send_zkapp`
+  and `unlock_account`.
+- Signatures made outside the daemon: `Payment::signature` and
+  `Delegation::signature` (`SignatureInput`).
+- Result fields of the common API (the union of what the three SDKs
+  returned): more `DaemonStatus`, `AccountData` (timing, permissions, zkApp
+  state), `BlockInfo` (epoch data, ledger hashes, coinbase, fee transfers,
+  user commands), `PooledUserCommand` and `SubmittedCommand` fields.
 - Feature `itn`: `mina_sdk::itn::ItnClient` for the daemon's ITN GraphQL
   server (`--itn-graphql-port`), with ed25519 request signing (`ItnKey`),
   the `auth` handshake, sequence numbers and recovery from HTTP 412. It
@@ -17,6 +32,17 @@ All notable changes to this project will be documented in this file.
 - Example `itn_internal_logs`.
 - Error variants `ItnUnauthorized`, `ItnSequencing` and `InvalidItnKey`.
   Code that matches `Error` exhaustively must add them.
+
+### Changed
+- Every query is a named operation of the specification. Nullable variables
+  are always sent, as null when omitted (`get_best_chain`, `get_account`).
+- `get_account` uses one document with an optional `$token`;
+  `queries::GET_ACCOUNT_WITH_TOKEN` is deprecated.
+- `SendPaymentResult` and `SendDelegationResult` are aliases of the new
+  `SubmittedCommand`. Code that builds these result types or `Payment` and
+  `Delegation` with struct literals must add the new fields.
+- The drift check sends a nullable variable without a sentinel as null, and
+  has sentinels for `ID`, `UnlockInput` and `SendZkappInput`.
 
 ## [0.2.0-alpha.1] - 2026-04-18
 

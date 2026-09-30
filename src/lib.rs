@@ -146,6 +146,9 @@ pub use client::{ClientConfig, MinaClient, QueryBuilder};
 pub use currency::Currency;
 pub use error::{Error, Result};
 pub use types::{
-    AccountBalance, AccountData, BlockInfo, DaemonStatus, Delegation, Payment, PeerInfo,
-    PooledUserCommand, SendDelegationResult, SendPaymentResult, SyncStatus,
+    AccountBalance, AccountData, AccountPermissions, AccountTiming, AddrsAndPorts, BlockInfo,
+    BlockRef, BlockTransaction, CompletedWork, DaemonMetrics, DaemonStatus, Delegation, EpochData,
+    FeeTransfer, GenesisConstants, Payment, PeerInfo, PooledUserCommand, SendDelegationResult,
+    SendPaymentResult, SignatureInput, SubmittedCommand, SyncStatus, TrackedAccount,
+    TransactionRef, TransactionStatus, ZkappCommandResult, ZkappFailure, ZkappFeePayer,
 };
