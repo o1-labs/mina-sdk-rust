@@ -1,10 +1,9 @@
 //! GraphQL documents for the daemon's ITN server.
 //!
 //! They are the documents of `spec/itn-operations.graphql` (a copy of
-//! [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec)); a test checks
-//! that they stay identical. They follow `schema/itn_graphql_schema.json`, an
-//! introspection dump of `Mina_graphql.schema_itn` taken from a running
-//! daemon. Use them with
+//! [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec), whose CI
+//! validates them against the daemon's `schema_itn`); a test checks that they
+//! stay identical. Use them with
 //! [`ItnClient::execute_query`](super::ItnClient::execute_query) for custom selections.
 
 /// Server UUID and the signer's sequence number; the handshake before any

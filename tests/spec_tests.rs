@@ -1,16 +1,15 @@
-//! The common API specification (`spec/operations.graphql`, see
-//! `spec/SPEC.md`; a copy of o1-labs/mina-sdk-spec) against this SDK:
+//! Conformance to the specification in `spec/` (a copy of
+//! o1-labs/mina-sdk-spec at the tag in `spec/VERSION`):
 //!
-//! 1. every document of the specification is valid against
-//!    `schema/graphql_schema.json` (fields, arguments, nested selections);
-//! 2. the query strings in `mina_sdk::queries` are exactly the specification's
-//!    documents, up to white space, and every document has one;
-//! 3. likewise the ITN query strings in `mina_sdk::itn::queries` and
+//! 1. the query strings in `mina_sdk::queries` are exactly the documents of
+//!    `spec/operations.graphql`, up to white space, and every document has
+//!    one;
+//! 2. likewise the ITN query strings in `mina_sdk::itn::queries` and
 //!    `spec/itn-operations.graphql` (feature `itn`).
+//!
+//! mina-sdk-spec's CI validates the documents against the daemon's schema.
 
 use std::collections::BTreeMap;
-
-use serde_json::Value;
 
 use mina_sdk::queries;
 
@@ -79,113 +78,6 @@ fn operations(doc: &str) -> BTreeMap<String, (String, Vec<String>)> {
     ops
 }
 
-struct Schema {
-    query: String,
-    mutation: String,
-    types: BTreeMap<String, Value>,
-}
-
-fn base(t: &Value) -> String {
-    match t["name"].as_str() {
-        Some(n) => n.to_string(),
-        None => base(&t["ofType"]),
-    }
-}
-
-impl Schema {
-    fn load() -> Self {
-        let v: Value = serde_json::from_str(&read("schema/graphql_schema.json")).unwrap();
-        let s = &v["data"]["__schema"];
-        Schema {
-            query: s["queryType"]["name"].as_str().unwrap().into(),
-            mutation: s["mutationType"]["name"].as_str().unwrap().into(),
-            types: s["types"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|t| (t["name"].as_str().unwrap().to_string(), t.clone()))
-                .collect(),
-        }
-    }
-
-    /// Check the selection set at `toks[i]` against type `ty`.
-    fn selection(
-        &self,
-        ty: &str,
-        toks: &[String],
-        mut i: usize,
-        problems: &mut Vec<String>,
-    ) -> usize {
-        i += 1;
-        let fields = self.types[ty]["fields"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default();
-        while toks[i] != "}" {
-            let name = &toks[i];
-            let Some(field) = fields.iter().find(|f| f["name"] == name.as_str()) else {
-                problems.push(format!("{ty}.{name} is not in the schema"));
-                return toks.len() - 1;
-            };
-            i += 1;
-            if toks[i] == "(" {
-                let args: Vec<&str> = field["args"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .map(|a| a["name"].as_str().unwrap())
-                    .collect();
-                let mut depth = 1;
-                i += 1;
-                while depth > 0 {
-                    match toks[i].as_str() {
-                        "(" | "{" => depth += 1,
-                        ")" | "}" => depth -= 1,
-                        arg if depth == 1
-                            && toks[i + 1] == ":"
-                            && !arg.starts_with('$')
-                            && !args.contains(&arg) =>
-                        {
-                            problems.push(format!("{ty}.{name} has no argument {arg}"))
-                        }
-                        _ => {}
-                    }
-                    i += 1;
-                }
-            }
-            if toks[i] == "{" {
-                i = self.selection(&base(&field["type"]), toks, i, problems);
-            } else if self.types[&base(&field["type"])]["kind"] == "OBJECT" {
-                problems.push(format!("{ty}.{name} is an object and needs a selection"));
-            }
-        }
-        i + 1
-    }
-
-    fn check(&self, kind: &str, toks: &[String]) -> Vec<String> {
-        let root = if kind == "mutation" {
-            &self.mutation
-        } else {
-            &self.query
-        };
-        let mut depth = 0;
-        let start = toks
-            .iter()
-            .position(|t| {
-                match t.as_str() {
-                    "(" => depth += 1,
-                    ")" => depth -= 1,
-                    _ => {}
-                }
-                depth == 0 && t == "{"
-            })
-            .unwrap();
-        let mut problems = Vec::new();
-        self.selection(root, toks, start, &mut problems);
-        problems
-    }
-}
-
 /// Every query string of `mina_sdk::queries` that belongs to the common API.
 const SDK_DOCUMENTS: &[&str] = &[
     queries::SYNC_STATUS,
@@ -211,17 +103,6 @@ const SDK_DOCUMENTS: &[&str] = &[
     queries::SET_SNARK_WORKER,
     queries::SET_SNARK_WORK_FEE,
 ];
-
-#[test]
-fn test_spec_documents_are_valid_against_the_schema() {
-    let schema = Schema::load();
-    let spec = operations(&read("spec/operations.graphql"));
-    assert_eq!(spec.len(), 22, "the specification has 22 operations");
-    for (name, (kind, toks)) in &spec {
-        let problems = schema.check(kind, toks);
-        assert!(problems.is_empty(), "{name}: {problems:?}");
-    }
-}
 
 /// Check that `documents` are exactly the operations of `spec_file`.
 fn assert_documents_are_the_spec(spec_file: &str, documents: &[&str]) {
@@ -268,23 +149,5 @@ fn test_itn_queries_are_the_spec_documents() {
             itn::STOP_DAEMON,
             itn::ZKAPP_COMMAND_LIMIT,
         ],
-    );
-}
-
-#[test]
-fn test_checker_catches_drift() {
-    let schema = Schema::load();
-    let check = |doc: &str| {
-        let (_, (kind, toks)) = operations(doc).into_iter().next().unwrap();
-        schema.check(&kind, &toks)
-    };
-    assert!(check("query A { snarkPool { workIdz } }")[0].contains("not in the schema"));
-    assert!(
-        check("query A($p: ID) { transactionStatus(paymentX: $p) }")[0].contains("no argument")
-    );
-    assert!(check("query A { genesisBlock }")[0].contains("needs a selection"));
-    assert!(
-        check("mutation A($f: UInt64!) { setSnarkWorkFee(input: {fee: $f}) { lastFee } }")
-            .is_empty()
     );
 }

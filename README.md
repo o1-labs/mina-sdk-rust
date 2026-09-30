@@ -168,9 +168,9 @@ itn.stop_scheduled_transactions(&handle).await?;
 | `execute_query(query, vars, name)` | any document, sequenced and signed |
 
 A sequenced request is never repeated after a transport error, because the
-daemon may already have run it. `schema/itn_graphql_schema.json` is an
-introspection dump of the ITN schema (daemon `4.0.0-6965b50` devnet), and a
-test checks every document in `mina_sdk::itn::queries` against it.
+daemon may already have run it. The documents in `mina_sdk::itn::queries`
+are those of `spec/itn-operations.graphql`, which mina-sdk-spec validates
+against the daemon's ITN schema.
 
 ## Examples
 
