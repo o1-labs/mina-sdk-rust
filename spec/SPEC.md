@@ -1,14 +1,15 @@
 # Mina SDK common API
 
-`mina-sdk-rust`, `mina-sdk-go` and `mina-sdk-js` have the same client API for
-the daemon's public GraphQL server (default port 3085). This document and
-[`operations.graphql`](operations.graphql) define it. Each SDK keeps an
-identical copy of both files, and a test in each SDK checks that its query
-strings are the documents of `operations.graphql`, up to white space.
+The Mina SDKs (`mina-sdk-rust`, `mina-sdk-go`, `mina-sdk-js`) have the same
+client API for the daemon's public GraphQL server (default port 3085). This
+document and [`operations.graphql`](operations.graphql) define it.
+[`ITN.md`](ITN.md) defines the client of the daemon's ITN server.
 
-To change the API, change these two files first, then every SDK. The ITN
-client (`itn` in every SDK) is outside this document; it follows the daemon's
-`schema_itn` (`schema/itn_graphql_schema.json`).
+Each SDK keeps a copy of these files at a release tag of this repository
+(`spec/VERSION`), and a test that its query strings are the documents of
+`operations.graphql`, up to white space. To change the API, change this
+repository first, make a release, then update every SDK with
+`scripts/sync.sh`.
 
 ## Methods
 

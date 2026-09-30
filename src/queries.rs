@@ -1,8 +1,10 @@
 //! GraphQL query and mutation strings for the Mina daemon API.
 //!
-//! These are the documents of `spec/operations.graphql` (the common API of
-//! the Rust, Go and JS SDKs, see `spec/SPEC.md`); `tests/spec_tests.rs`
-//! checks that they stay identical. Change the specification first.
+//! These are the documents of `spec/operations.graphql`, the common API of
+//! the Mina SDKs (see `spec/SPEC.md`). `spec/` is a copy of
+//! [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec) at the tag in
+//! `spec/VERSION`; `tests/spec_tests.rs` checks that these documents stay
+//! identical. Change the specification first.
 
 /// Node sync status.
 pub const SYNC_STATUS: &str = r#"query SyncStatus {

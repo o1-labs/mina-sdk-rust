@@ -76,9 +76,11 @@ let client = MinaClient::with_config(ClientConfig {
 
 Full API documentation is available on [docs.rs](https://docs.rs/mina-sdk).
 
-The Rust, Go and JS SDKs have the same API. [`spec/SPEC.md`](spec/SPEC.md)
-and [`spec/operations.graphql`](spec/operations.graphql) define it, and a test
-checks that this SDK's queries are the specification's documents.
+The Mina SDKs have the same API, defined in
+[mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec). `spec/` is a copy
+of it at the tag in `spec/VERSION`. A test checks that this SDK's queries,
+including the ITN queries, are the specification's documents, and CI checks
+that `spec/` is the tag's copy.
 
 ### Queries
 

@@ -5,10 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- The common API of the Rust, Go and JS SDKs: `spec/SPEC.md` and
-  `spec/operations.graphql`. `tests/spec_tests.rs` checks that the query
-  strings are the specification's documents and that the documents are valid
-  against `schema/graphql_schema.json`.
+- The common API of the Mina SDKs, from
+  [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec) v0.1.0: `spec/`
+  is a copy at the tag in `spec/VERSION`. `tests/spec_tests.rs` checks that
+  the query strings (daemon and ITN) are the specification's documents and
+  that the documents are valid against `schema/graphql_schema.json`. A CI job
+  checks that `spec/` is the tag's copy.
 - Methods of the common API that this SDK did not have: `get_daemon_metrics`,
   `get_genesis_block`, `get_block` (`BlockRef`), `get_pooled_zkapp_commands`,
   `get_transaction_status` (`TransactionRef`), `get_genesis_constants`,
@@ -34,7 +36,8 @@ All notable changes to this project will be documented in this file.
   Code that matches `Error` exhaustively must add them.
 
 ### Changed
-- Every query is a named operation of the specification. Nullable variables
+- Every query, including the ITN queries, is a named operation of the
+  specification. Nullable variables
   are always sent, as null when omitted (`get_best_chain`, `get_account`).
 - `get_account` uses one document with an optional `$token`;
   `queries::GET_ACCOUNT_WITH_TOKEN` is deprecated.

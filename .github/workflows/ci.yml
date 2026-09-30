@@ -43,6 +43,26 @@ jobs:
       - name: Run unit tests (all features)
         run: cargo test --all-features --lib --tests -- --skip integration
 
+  spec:
+    name: Specification copy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read spec/VERSION
+        id: spec
+        run: echo "version=$(cat spec/VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Check out mina-sdk-spec at that tag
+        uses: actions/checkout@v7
+        with:
+          repository: o1-labs/mina-sdk-spec
+          ref: ${{ steps.spec.outputs.version }}
+          path: .mina-sdk-spec
+
+      - name: Check that spec/ is the tag's copy
+        run: .mina-sdk-spec/scripts/sync.sh --check .
+
   deny:
     name: Dependency audit
     runs-on: ubuntu-latest

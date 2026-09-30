@@ -1,10 +1,11 @@
 # Mina SDK common API: the GraphQL documents of the public daemon API
-# (port 3085) that mina-sdk-rust, mina-sdk-go and mina-sdk-js send.
+# (port 3085) that the Mina SDKs send.
 #
-# This file is the specification; SPEC.md describes the methods and result
-# types. Each SDK keeps an identical copy and a test that its query strings
-# are these documents, up to white space. Change the documents here first,
-# then in every SDK.
+# This file and SPEC.md are the specification (o1-labs/mina-sdk-spec). Each
+# SDK keeps a copy at a pinned tag (spec/VERSION) and a test that its query
+# strings are these documents, up to white space. CI in this repository
+# validates the documents against schema/daemon.graphql and against live
+# daemons. Change the documents here first, then in every SDK.
 #
 # Rules:
 # - One named operation per method. The SDKs send the operation name too.

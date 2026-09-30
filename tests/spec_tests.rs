@@ -1,10 +1,12 @@
 //! The common API specification (`spec/operations.graphql`, see
-//! `spec/SPEC.md`) against this SDK:
+//! `spec/SPEC.md`; a copy of o1-labs/mina-sdk-spec) against this SDK:
 //!
 //! 1. every document of the specification is valid against
 //!    `schema/graphql_schema.json` (fields, arguments, nested selections);
 //! 2. the query strings in `mina_sdk::queries` are exactly the specification's
-//!    documents, up to white space, and every document has one.
+//!    documents, up to white space, and every document has one;
+//! 3. likewise the ITN query strings in `mina_sdk::itn::queries` and
+//!    `spec/itn-operations.graphql` (feature `itn`).
 
 use std::collections::BTreeMap;
 
@@ -221,28 +223,51 @@ fn test_spec_documents_are_valid_against_the_schema() {
     }
 }
 
-#[test]
-fn test_sdk_queries_are_the_spec_documents() {
-    let spec = operations(&read("spec/operations.graphql"));
+/// Check that `documents` are exactly the operations of `spec_file`.
+fn assert_documents_are_the_spec(spec_file: &str, documents: &[&str]) {
+    let spec = operations(&read(spec_file));
     let mut covered = Vec::new();
-    for doc in SDK_DOCUMENTS {
+    for doc in documents {
         let ops = operations(doc);
         assert_eq!(ops.len(), 1, "one named operation per query string:\n{doc}");
         let (name, (_, toks)) = ops.into_iter().next().unwrap();
         let (_, expected) = spec
             .get(&name)
             .unwrap_or_else(|| panic!("{name} is not in the specification"));
-        assert_eq!(
-            &toks, expected,
-            "{name} differs from spec/operations.graphql"
-        );
+        assert_eq!(&toks, expected, "{name} differs from {spec_file}");
         covered.push(name);
     }
     covered.sort();
     let all: Vec<_> = spec.keys().cloned().collect();
     assert_eq!(
         covered, all,
-        "every specification operation has one query string"
+        "every operation of {spec_file} has one query string"
+    );
+}
+
+#[test]
+fn test_sdk_queries_are_the_spec_documents() {
+    assert_documents_are_the_spec("spec/operations.graphql", SDK_DOCUMENTS);
+}
+
+#[cfg(feature = "itn")]
+#[test]
+fn test_itn_queries_are_the_spec_documents() {
+    use mina_sdk::itn::queries as itn;
+    assert_documents_are_the_spec(
+        "spec/itn-operations.graphql",
+        &[
+            itn::AUTH,
+            itn::SLOTS_WON,
+            itn::INTERNAL_LOGS,
+            itn::FLUSH_INTERNAL_LOGS,
+            itn::SCHEDULE_PAYMENTS,
+            itn::SCHEDULE_ZKAPP_COMMANDS,
+            itn::STOP_SCHEDULED_TRANSACTIONS,
+            itn::UPDATE_GATING,
+            itn::STOP_DAEMON,
+            itn::ZKAPP_COMMAND_LIMIT,
+        ],
     );
 }
 
