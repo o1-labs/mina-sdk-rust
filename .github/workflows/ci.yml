@@ -87,7 +87,7 @@ jobs:
       - name: Generate coverage
         run: >
           cargo tarpaulin --all-features --lib --test client_tests
-          --test itn_client_tests --test itn_schema_tests
+          --test itn_client_tests --test common_api_tests
           --out lcov --skip-clean
           --exclude-files 'examples/*'
           --exclude-files 'tests/*'
