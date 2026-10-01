@@ -226,7 +226,7 @@ MINA_ITN_URI=http://127.0.0.1:3086/graphql MINA_ITN_KEY=<base64 seed> \
 
 **Account not found** — The account may not exist on the network, or the public key format is incorrect. Mina public keys start with `B62q`.
 
-**Schema drift** — If queries fail with unexpected GraphQL errors, the daemon version may have changed its schema. Run the schema drift check: `python3 scripts/check_schema_drift.py --endpoint http://your-node:3085/graphql`
+**Schema drift** — If queries fail with unexpected GraphQL errors, the daemon version may have changed its schema. Check the documents against your node with mina-sdk-spec: `python3 scripts/check.py --endpoint http://your-node:3085/graphql` (in a clone of [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec)).
 
 **Timeout errors** — Increase the timeout and retry settings via `ClientConfig`. Some queries (like `get_best_chain`) can be slow on nodes that are still syncing.
 

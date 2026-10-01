@@ -42,8 +42,13 @@ All notable changes to this project will be documented in this file.
 - `SendPaymentResult` and `SendDelegationResult` are aliases of the new
   `SubmittedCommand`. Code that builds these result types or `Payment` and
   `Delegation` with struct literals must add the new fields.
-- The drift check sends a nullable variable without a sentinel as null, and
-  has sentinels for `ID`, `UnlockInput` and `SendZkappInput`.
+
+### Removed
+- The schema drift check (`scripts/check_schema_drift.py`, the Schema
+  Drift Check workflow and `schema/graphql_schema.json`). The documents of
+  this SDK are the documents of mina-sdk-spec, whose weekly drift job
+  validates them against the lightnet daemons of `master`, `compatible` and
+  `develop`.
 
 ## [0.2.0-alpha.1] - 2026-04-18
 
