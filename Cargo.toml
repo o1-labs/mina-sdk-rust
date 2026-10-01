@@ -11,7 +11,7 @@ readme = "README.md"
 authors = ["Mina Protocol <engineering@minaprotocol.com>"]
 keywords = ["mina", "blockchain", "graphql", "cryptocurrency", "web3"]
 categories = ["api-bindings", "cryptography::cryptocurrencies"]
-exclude = [".github/", "scripts/", "schema/", "tests/integration_tests.rs"]
+exclude = [".github/", "tests/integration_tests.rs"]
 
 [package.metadata.docs.rs]
 all-features = true

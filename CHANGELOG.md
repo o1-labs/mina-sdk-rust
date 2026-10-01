@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- The common API of the Mina SDKs, from
+  [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec) v0.1.0: `spec/`
+  is a copy at the tag in `spec/VERSION`. `tests/spec_tests.rs` checks that
+  the query strings (daemon and ITN) are the specification's documents, and a
+  CI job checks that `spec/` is the tag's copy. mina-sdk-spec's CI validates
+  the documents against the daemon's schemas.
+- Methods of the common API that this SDK did not have: `get_daemon_metrics`,
+  `get_genesis_block`, `get_block` (`BlockRef`), `get_pooled_zkapp_commands`,
+  `get_transaction_status` (`TransactionRef`), `get_genesis_constants`,
+  `get_tracked_accounts`, `get_snark_pool`, `get_fork_config`, `send_zkapp`
+  and `unlock_account`.
+- Signatures made outside the daemon: `Payment::signature` and
+  `Delegation::signature` (`SignatureInput`).
+- Result fields of the common API (the union of what the three SDKs
+  returned): more `DaemonStatus`, `AccountData` (timing, permissions, zkApp
+  state), `BlockInfo` (epoch data, ledger hashes, coinbase, fee transfers,
+  user commands), `PooledUserCommand` and `SubmittedCommand` fields.
 - Feature `itn`: `mina_sdk::itn::ItnClient` for the daemon's ITN GraphQL
   server (`--itn-graphql-port`), with ed25519 request signing (`ItnKey`),
   the `auth` handshake, sequence numbers and recovery from HTTP 412. It
@@ -12,11 +29,26 @@ All notable changes to this project will be documented in this file.
   `flushInternalLogs`, `schedulePayments`, `scheduleZkappCommands`,
   `stopScheduledTransactions`, `updateGating`, `stopDaemon`,
   `zkAppCommandLimit`.
-- `schema/itn_graphql_schema.json`, an introspection dump of the ITN schema,
-  and an offline test of the ITN documents against it.
 - Example `itn_internal_logs`.
 - Error variants `ItnUnauthorized`, `ItnSequencing` and `InvalidItnKey`.
   Code that matches `Error` exhaustively must add them.
+
+### Changed
+- Every query, including the ITN queries, is a named operation of the
+  specification. Nullable variables
+  are always sent, as null when omitted (`get_best_chain`, `get_account`).
+- `get_account` uses one document with an optional `$token`;
+  `queries::GET_ACCOUNT_WITH_TOKEN` is deprecated.
+- `SendPaymentResult` and `SendDelegationResult` are aliases of the new
+  `SubmittedCommand`. Code that builds these result types or `Payment` and
+  `Delegation` with struct literals must add the new fields.
+
+### Removed
+- The schema drift check (`scripts/check_schema_drift.py`, the Schema
+  Drift Check workflow and `schema/graphql_schema.json`). The documents of
+  this SDK are the documents of mina-sdk-spec, whose weekly drift job
+  validates them against the lightnet daemons of `master`, `compatible` and
+  `develop`.
 
 ## [0.2.0-alpha.1] - 2026-04-18
 

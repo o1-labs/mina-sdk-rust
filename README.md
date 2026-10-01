@@ -76,25 +76,42 @@ let client = MinaClient::with_config(ClientConfig {
 
 Full API documentation is available on [docs.rs](https://docs.rs/mina-sdk).
 
+The Mina SDKs have the same API, defined in
+[mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec). `spec/` is a copy
+of it at the tag in `spec/VERSION`. A test checks that this SDK's queries,
+including the ITN queries, are the specification's documents, and CI checks
+that `spec/` is the tag's copy.
+
 ### Queries
 
 | Method | Description |
 |--------|-------------|
 | `get_sync_status()` | Node sync status (Synced, Bootstrap, etc.) |
-| `get_daemon_status()` | Comprehensive daemon status |
+| `get_daemon_status()` | Daemon status: chain length, peers, addresses, block production keys |
+| `get_daemon_metrics()` | Transaction and snark pool metrics, block production delay |
 | `get_network_id()` | Network identifier |
-| `get_account(public_key, token_id)` | Account balance, nonce, delegate |
-| `get_best_chain(max_length)` | Recent blocks from best chain |
+| `get_account(public_key, token_id)` | Balance, nonce, delegate, timing, permissions, zkApp state |
+| `get_best_chain(max_length)` | Recent blocks from the best chain |
+| `get_genesis_block()` | The genesis block |
+| `get_block(BlockRef)` | One block, by state hash or height |
 | `get_peers()` | Connected peers |
-| `get_pooled_user_commands(public_key)` | Pending transactions |
+| `get_pooled_user_commands(public_key)` | Pending payments and delegations |
+| `get_pooled_zkapp_commands(public_key)` | Pending zkApp commands |
+| `get_transaction_status(TransactionRef)` | `Pending`, `Included` or `Unknown` |
+| `get_genesis_constants()` | Genesis timestamp, coinbase, account creation fee |
+| `get_tracked_accounts()` | Accounts in the daemon's keystore |
+| `get_snark_pool()` | Completed snark work |
+| `get_fork_config()` | The daemon's fork configuration (JSON) |
 | `execute_query(query, variables, name)` | Run a custom GraphQL query |
 
 ### Mutations
 
 | Method | Description |
 |--------|-------------|
-| `send_payment(Payment)` | Send a payment |
-| `send_delegation(Delegation)` | Delegate stake |
+| `send_payment(Payment)` | Send a payment; `Payment::signature` for one made outside the daemon |
+| `send_delegation(Delegation)` | Delegate stake; `Delegation::signature` likewise |
+| `send_zkapp(command)` | Send a signed zkApp command (JSON) |
+| `unlock_account(public_key, password)` | Unlock a keystore account |
 | `set_snark_worker(public_key)` | Set/unset SNARK worker |
 | `set_snark_work_fee(fee)` | Set SNARK work fee |
 
@@ -151,9 +168,9 @@ itn.stop_scheduled_transactions(&handle).await?;
 | `execute_query(query, vars, name)` | any document, sequenced and signed |
 
 A sequenced request is never repeated after a transport error, because the
-daemon may already have run it. `schema/itn_graphql_schema.json` is an
-introspection dump of the ITN schema (daemon `4.0.0-6965b50` devnet), and a
-test checks every document in `mina_sdk::itn::queries` against it.
+daemon may already have run it. The documents in `mina_sdk::itn::queries`
+are those of `spec/itn-operations.graphql`, which mina-sdk-spec validates
+against the daemon's ITN schema.
 
 ## Examples
 
@@ -209,7 +226,7 @@ MINA_ITN_URI=http://127.0.0.1:3086/graphql MINA_ITN_KEY=<base64 seed> \
 
 **Account not found** — The account may not exist on the network, or the public key format is incorrect. Mina public keys start with `B62q`.
 
-**Schema drift** — If queries fail with unexpected GraphQL errors, the daemon version may have changed its schema. Run the schema drift check: `python3 scripts/check_schema_drift.py --endpoint http://your-node:3085/graphql`
+**Schema drift** — If queries fail with unexpected GraphQL errors, the daemon version may have changed its schema. Check the documents against your node with mina-sdk-spec: `python3 scripts/check.py --endpoint http://your-node:3085/graphql` (in a clone of [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec)).
 
 **Timeout errors** — Increase the timeout and retry settings via `ClientConfig`. Some queries (like `get_best_chain`) can be slow on nodes that are still syncing.
 

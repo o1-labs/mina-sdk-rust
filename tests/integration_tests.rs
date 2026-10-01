@@ -259,3 +259,78 @@ async fn test_payment_appears_in_pool() {
         .await
         .unwrap();
 }
+
+// -- Common API (spec/SPEC.md) --
+
+#[tokio::test]
+async fn test_daemon_metrics() {
+    let Some(uri) = graphql_uri() else { return };
+    let client = make_client(&uri);
+    assert!(wait_for_sync(&client).await, "daemon did not reach SYNCED");
+
+    let metrics = client.get_daemon_metrics().await.unwrap();
+    assert!(metrics.transaction_pool_size >= 0);
+}
+
+#[tokio::test]
+async fn test_genesis_block_and_block_lookups() {
+    let Some(uri) = graphql_uri() else { return };
+    let client = make_client(&uri);
+    assert!(wait_for_sync(&client).await, "daemon did not reach SYNCED");
+
+    let genesis = client.get_genesis_block().await.unwrap();
+    assert!(!genesis.state_hash.is_empty());
+    assert!(!genesis.staking_epoch.ledger_hash.is_empty());
+
+    // The best tip is in the transition frontier, so it can be read back by
+    // state hash and by height. The daemon does not find the frontier's root
+    // by height, so wait until the tip is above the root of a new chain
+    // (height 1).
+    let mut tip = client.get_best_chain(Some(1)).await.unwrap().remove(0);
+    for _ in 0..60 {
+        if tip.height > 1 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(5)).await;
+        tip = client.get_best_chain(Some(1)).await.unwrap().remove(0);
+    }
+    assert!(tip.height > 1, "no block after the genesis block");
+    let by_hash = client
+        .get_block(BlockRef::StateHash(tip.state_hash.clone()))
+        .await
+        .unwrap();
+    assert_eq!(by_hash.height, tip.height);
+    assert_eq!(by_hash.previous_state_hash, tip.previous_state_hash);
+    let by_height = client
+        .get_block(BlockRef::Height(tip.height))
+        .await
+        .unwrap();
+    assert_eq!(by_height.state_hash, tip.state_hash);
+}
+
+#[tokio::test]
+async fn test_genesis_constants_and_pools() {
+    let Some(uri) = graphql_uri() else { return };
+    let client = make_client(&uri);
+    assert!(wait_for_sync(&client).await, "daemon did not reach SYNCED");
+
+    let constants = client.get_genesis_constants().await.unwrap();
+    assert!(!constants.genesis_timestamp.is_empty());
+    client.get_snark_pool().await.unwrap();
+    client.get_pooled_zkapp_commands(None).await.unwrap();
+    client.get_tracked_accounts().await.unwrap();
+}
+
+#[tokio::test]
+async fn test_transaction_status_of_an_unknown_payment() {
+    let Some(uri) = graphql_uri() else { return };
+    let client = make_client(&uri);
+    assert!(wait_for_sync(&client).await, "daemon did not reach SYNCED");
+
+    // An ID that does not decode is a GraphQL error, not a transport one.
+    let err = client
+        .get_transaction_status(TransactionRef::Payment("not-an-id".into()))
+        .await
+        .unwrap_err();
+    assert!(matches!(err, Error::Graphql { .. }), "{err}");
+}
