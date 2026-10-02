@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - The common API of the Mina SDKs, from
-  [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec) v0.1.0: `spec/`
+  [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec) v0.1.2: `spec/`
   is a copy at the tag in `spec/VERSION`. `tests/spec_tests.rs` checks that
   the query strings (daemon and ITN) are the specification's documents, and a
   CI job checks that `spec/` is the tag's copy. mina-sdk-spec's CI validates
