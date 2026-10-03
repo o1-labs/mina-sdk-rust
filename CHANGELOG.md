@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- ITN methods for harness support, which need a daemon with
+  MinaProtocol/mina#19616: `commit_id`, `scheduled_transactions`,
+  `schedule_payments_with_handle`, `schedule_zkapp_commands_with_handle` and
+  `create_accounts` (`CreateAccountsDetails`, `CreatedAccounts`). Live tests
+  run with `MINA_ITN_HARNESS=1`, and `create_accounts` also needs
+  `MINA_ITN_FEE_PAYER`. `spec/` is mina-sdk-spec v0.2.0.
 - The common API of the Mina SDKs, from
   [mina-sdk-spec](https://github.com/o1-labs/mina-sdk-spec) v0.1.2: `spec/`
   is a copy at the tag in `spec/VERSION`. `tests/spec_tests.rs` checks that

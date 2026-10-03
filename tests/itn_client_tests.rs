@@ -352,3 +352,92 @@ async fn test_non_default_token_is_sent_only_when_set() {
     assert!(inputs[0].get("nonDefaultToken").is_none());
     assert_eq!(inputs[1]["nonDefaultToken"], true);
 }
+
+/// The operations for harness support (MinaProtocol/mina#19616): parsing of
+/// the results, and the variables sent (`handle: null` when it is omitted).
+#[tokio::test]
+async fn test_harness_support_operations() {
+    let server = MockServer::start().await;
+    let key = ItnKey::generate();
+    // CommitId selects `auth` too, so it needs a higher priority than the
+    // handshake mock.
+    Mock::given(method("POST"))
+        .and(body_string_contains("commitId"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({ "data": { "auth": { "commitId": "abc123" } } })),
+        )
+        .with_priority(1)
+        .mount(&server)
+        .await;
+    mount_auth(&server, 0).await;
+    for (needle, data) in [
+        (
+            "scheduledTransactions",
+            json!({ "scheduledTransactions": ["h1", "h2"] }),
+        ),
+        (
+            "createAccounts",
+            json!({ "createAccounts": {
+                "handle": "h3",
+                "accounts": [ { "publicKey": "B62qa", "privateKey": "EKa" } ] } }),
+        ),
+        ("schedulePayments", json!({ "schedulePayments": "h4" })),
+        (
+            "scheduleZkappCommands",
+            json!({ "scheduleZkappCommands": "h5" }),
+        ),
+    ] {
+        Mock::given(method("POST"))
+            .and(body_string_contains(needle))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "data": data })))
+            .with_priority(2)
+            .mount(&server)
+            .await;
+    }
+    let c = client(&server, key.clone());
+    assert_eq!(c.commit_id().await.unwrap(), "abc123");
+    assert_eq!(c.scheduled_transactions().await.unwrap(), ["h1", "h2"]);
+    let details = CreateAccountsDetails {
+        fee_payer: "EKfee".into(),
+        num_accounts: 2,
+        fee: Currency::from_nanomina(100),
+        amount: Currency::from_nanomina(5000),
+    };
+    let created = c.create_accounts(&details, None).await.unwrap();
+    assert_eq!(created.handle, "h3");
+    assert_eq!(created.accounts[0].private_key, "EKa");
+    c.create_accounts(&details, Some("u1")).await.unwrap();
+    let payments = PaymentsDetails {
+        duration_min: 1,
+        tps: 0.5,
+        memo_prefix: "m".into(),
+        max_fee: Currency::from_nanomina(20),
+        min_fee: Currency::from_nanomina(10),
+        amount: Currency::from_nanomina(1),
+        receiver: "B62qr".into(),
+        senders: vec![],
+    };
+    assert_eq!(
+        c.schedule_payments_with_handle(&payments, "u2")
+            .await
+            .unwrap(),
+        "h4"
+    );
+
+    let vars: Vec<Value> = server
+        .received_requests()
+        .await
+        .unwrap()
+        .iter()
+        .filter(|r| verify(r, &key).is_some())
+        .map(|r| serde_json::from_slice::<Value>(&r.body).unwrap()["variables"].clone())
+        .collect();
+    assert_eq!(vars[2]["handle"], Value::Null);
+    assert_eq!(
+        vars[2]["input"],
+        json!({ "feePayer": "EKfee", "numAccounts": 2, "fee": "100", "amount": "5000" })
+    );
+    assert_eq!(vars[3]["handle"], "u1");
+    assert_eq!(vars[4]["handle"], "u2");
+}
