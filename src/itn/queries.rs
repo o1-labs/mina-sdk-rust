@@ -91,3 +91,48 @@ mutation ZkappCommandLimit($limit: Int) {
   zkAppCommandLimit(limit: $limit)
 }
 "#;
+
+/// The daemon's git commit. Needs a daemon with MinaProtocol/mina#19616;
+/// older daemons answer with a GraphQL error.
+pub const COMMIT_ID: &str = r#"
+query CommitId {
+  auth {
+    commitId
+  }
+}
+"#;
+
+/// Handles of the running payment and zkApp schedulers and account-creation
+/// jobs (mina#19616).
+pub const SCHEDULED_TRANSACTIONS: &str = r#"
+query ScheduledTransactions {
+  scheduledTransactions
+}
+"#;
+
+/// Start sending payments under a handle the caller chose (mina#19616).
+pub const SCHEDULE_PAYMENTS_WITH_HANDLE: &str = r#"
+mutation SchedulePaymentsWithHandle($input: PaymentsDetails!, $handle: String!) {
+  schedulePayments(input: $input, handle: $handle)
+}
+"#;
+
+/// Start sending zkApp commands under a handle the caller chose (mina#19616).
+pub const SCHEDULE_ZKAPP_COMMANDS_WITH_HANDLE: &str = r#"
+mutation ScheduleZkappCommandsWithHandle($input: ZkappCommandsDetails!, $handle: String!) {
+  scheduleZkappCommands(input: $input, handle: $handle)
+}
+"#;
+
+/// Create and fund new accounts in the background under a handle (mina#19616).
+pub const CREATE_ACCOUNTS: &str = r#"
+mutation CreateAccounts($input: CreateAccountsDetails!, $handle: String) {
+  createAccounts(input: $input, handle: $handle) {
+    handle
+    accounts {
+      publicKey
+      privateKey
+    }
+  }
+}
+"#;

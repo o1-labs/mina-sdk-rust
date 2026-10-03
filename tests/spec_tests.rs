@@ -148,6 +148,11 @@ fn test_itn_queries_are_the_spec_documents() {
             itn::UPDATE_GATING,
             itn::STOP_DAEMON,
             itn::ZKAPP_COMMAND_LIMIT,
+            itn::COMMIT_ID,
+            itn::SCHEDULED_TRANSACTIONS,
+            itn::SCHEDULE_PAYMENTS_WITH_HANDLE,
+            itn::SCHEDULE_ZKAPP_COMMANDS_WITH_HANDLE,
+            itn::CREATE_ACCOUNTS,
         ],
     );
 }

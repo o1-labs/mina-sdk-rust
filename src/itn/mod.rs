@@ -54,7 +54,8 @@ mod types;
 
 pub use key::ItnKey;
 pub use types::{
-    GatingUpdate, ItnAuth, ItnLog, NetworkPeer, PaymentsDetails, ZkappCommandsDetails,
+    CreateAccountsDetails, CreatedAccount, CreatedAccounts, GatingUpdate, ItnAuth, ItnLog,
+    NetworkPeer, PaymentsDetails, ZkappCommandsDetails,
 };
 
 use reqwest::StatusCode;
@@ -421,6 +422,105 @@ impl ItnClient {
             )
             .await?;
         Ok(data["zkAppCommandLimit"].as_i64())
+    }
+
+    // The following methods need a daemon with MinaProtocol/mina#19616;
+    // older daemons answer them with a GraphQL error. A handle is a UUID that
+    // the caller chooses and records before the call. A call with the handle
+    // of a running scheduler starts nothing and returns that handle, so these
+    // calls may be repeated after a transport error.
+
+    /// The git commit of the daemon's build.
+    pub async fn commit_id(&self) -> Result<String> {
+        const NAME: &str = "itn_commit_id";
+        let data = self.execute_query(queries::COMMIT_ID, None, NAME).await?;
+        data["auth"]["commitId"]
+            .as_str()
+            .map(str::to_string)
+            .ok_or_else(|| missing(NAME, "auth.commitId"))
+    }
+
+    /// Handles of the running payment and zkApp schedulers and
+    /// account-creation jobs.
+    pub async fn scheduled_transactions(&self) -> Result<Vec<String>> {
+        const NAME: &str = "itn_scheduled_transactions";
+        let data = self
+            .execute_query(queries::SCHEDULED_TRANSACTIONS, None, NAME)
+            .await?;
+        Ok(array(&data, "scheduledTransactions", NAME)?
+            .iter()
+            .filter_map(|h| h.as_str().map(str::to_string))
+            .collect())
+    }
+
+    /// Start sending payments under `handle`; returns it.
+    pub async fn schedule_payments_with_handle(
+        &self,
+        details: &PaymentsDetails,
+        handle: &str,
+    ) -> Result<String> {
+        self.string_mutation(
+            queries::SCHEDULE_PAYMENTS_WITH_HANDLE,
+            json!({ "input": details.to_json(), "handle": handle }),
+            "schedulePayments",
+            "itn_schedule_payments_with_handle",
+        )
+        .await
+    }
+
+    /// Start sending zkApp commands under `handle`; returns it.
+    pub async fn schedule_zkapp_commands_with_handle(
+        &self,
+        details: &ZkappCommandsDetails,
+        handle: &str,
+    ) -> Result<String> {
+        self.string_mutation(
+            queries::SCHEDULE_ZKAPP_COMMANDS_WITH_HANDLE,
+            json!({ "input": details.to_json(), "handle": handle }),
+            "scheduleZkappCommands",
+            "itn_schedule_zkapp_commands_with_handle",
+        )
+        .await
+    }
+
+    /// Create `details.num_accounts` accounts and fund them in the background;
+    /// the keys are returned at once. Wait until
+    /// [`ItnClient::scheduled_transactions`] no longer lists the returned
+    /// handle. `None` lets the daemon choose the handle.
+    pub async fn create_accounts(
+        &self,
+        details: &CreateAccountsDetails,
+        handle: Option<&str>,
+    ) -> Result<CreatedAccounts> {
+        const NAME: &str = "itn_create_accounts";
+        let data = self
+            .execute_query(
+                queries::CREATE_ACCOUNTS,
+                Some(json!({ "input": details.to_json(), "handle": handle })),
+                NAME,
+            )
+            .await?;
+        let created = &data["createAccounts"];
+        let handle = created["handle"]
+            .as_str()
+            .ok_or_else(|| missing(NAME, "createAccounts.handle"))?
+            .to_string();
+        let accounts = array(created, "accounts", NAME)?
+            .iter()
+            .map(|a| {
+                Ok(CreatedAccount {
+                    public_key: a["publicKey"]
+                        .as_str()
+                        .ok_or_else(|| missing(NAME, "accounts.publicKey"))?
+                        .to_string(),
+                    private_key: a["privateKey"]
+                        .as_str()
+                        .ok_or_else(|| missing(NAME, "accounts.privateKey"))?
+                        .to_string(),
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(CreatedAccounts { handle, accounts })
     }
 
     async fn string_mutation(

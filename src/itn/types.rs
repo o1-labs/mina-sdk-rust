@@ -192,3 +192,47 @@ impl GatingUpdate {
         })
     }
 }
+
+/// Input of `createAccounts`.
+#[derive(Debug, Clone)]
+pub struct CreateAccountsDetails {
+    /// Private key (base58) of the account that funds the new accounts.
+    pub fee_payer: String,
+    /// Number of new accounts.
+    pub num_accounts: i64,
+    /// Fee of each zkApp command that creates accounts.
+    pub fee: Currency,
+    /// Amount divided among the new accounts; each account also pays the
+    /// account creation fee out of its share.
+    pub amount: Currency,
+}
+
+impl CreateAccountsDetails {
+    pub(crate) fn to_json(&self) -> Value {
+        json!({
+            "feePayer": self.fee_payer,
+            "numAccounts": self.num_accounts,
+            "fee": self.fee.to_nanomina_str(),
+            "amount": self.amount.to_nanomina_str(),
+        })
+    }
+}
+
+/// A new account of `createAccounts`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreatedAccount {
+    /// Public key (base58).
+    pub public_key: String,
+    /// Private key (base58).
+    pub private_key: String,
+}
+
+/// Result of `createAccounts`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreatedAccounts {
+    /// Handle of the background job that funds the accounts; it is listed by
+    /// `scheduled_transactions` until the job ends.
+    pub handle: String,
+    /// The new accounts.
+    pub accounts: Vec<CreatedAccount>,
+}

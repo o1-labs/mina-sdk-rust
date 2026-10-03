@@ -100,3 +100,62 @@ async fn test_itn_update_gating_empty() {
         .await
         .unwrap();
 }
+
+// Operations for harness support (MinaProtocol/mina#19616). They run only with
+// MINA_ITN_HARNESS=1, because older daemons do not have them.
+fn harness() -> Option<ItnClient> {
+    let (uri, key) = itn()?;
+    (env::var("MINA_ITN_HARNESS").as_deref() == Ok("1")).then(|| ItnClient::new(&uri, key))
+}
+
+/// A random (version 4) UUID.
+fn new_uuid() -> String {
+    let mut b: [u8; 16] = rand::random();
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    let h: String = b.iter().map(|x| format!("{x:02x}")).collect();
+    format!(
+        "{}-{}-{}-{}-{}",
+        &h[0..8],
+        &h[8..12],
+        &h[12..16],
+        &h[16..20],
+        &h[20..32]
+    )
+}
+
+#[tokio::test]
+async fn test_itn_commit_id_and_listing() {
+    let Some(c) = harness() else { return };
+    assert!(c.commit_id().await.unwrap().len() >= 7);
+    c.scheduled_transactions().await.unwrap();
+}
+
+/// createAccounts sends transactions, so it also needs MINA_ITN_FEE_PAYER: the
+/// base58 private key of a funded account.
+#[tokio::test]
+async fn test_itn_create_accounts() {
+    let Some(c) = harness() else { return };
+    let Ok(fee_payer) = env::var("MINA_ITN_FEE_PAYER") else {
+        return;
+    };
+    let handle = new_uuid();
+    let details = CreateAccountsDetails {
+        fee_payer,
+        num_accounts: 3,
+        fee: mina_sdk::Currency::from_mina("0.1").unwrap(),
+        amount: mina_sdk::Currency::from_mina("6").unwrap(),
+    };
+    let created = c.create_accounts(&details, Some(&handle)).await.unwrap();
+    assert_eq!(created.handle, handle);
+    assert_eq!(created.accounts.len(), 3);
+    let again = c.create_accounts(&details, Some(&handle)).await.unwrap();
+    assert_eq!(again.accounts[0], created.accounts[0]);
+    for _ in 0..120 {
+        if !c.scheduled_transactions().await.unwrap().contains(&handle) {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    }
+    panic!("handle {handle} still listed after 10 minutes");
+}

@@ -167,6 +167,21 @@ itn.stop_scheduled_transactions(&handle).await?;
 | `set_zkapp_command_limit(limit)` | `zkAppCommandLimit` |
 | `execute_query(query, vars, name)` | any document, sequenced and signed |
 
+These need a daemon with MinaProtocol/mina#19616; older daemons answer them
+with a GraphQL error:
+
+| Method | GraphQL |
+|--------|---------|
+| `commit_id()` | `auth { commitId }`: the daemon's git commit |
+| `scheduled_transactions()` | `scheduledTransactions`: handles of the running schedulers |
+| `schedule_payments_with_handle(&PaymentsDetails, handle)` | `schedulePayments` with a caller-chosen handle |
+| `schedule_zkapp_commands_with_handle(&ZkappCommandsDetails, handle)` | `scheduleZkappCommands` with a caller-chosen handle |
+| `create_accounts(&CreateAccountsDetails, handle)` | `createAccounts`: keys at once, funding in the background under the handle |
+
+A handle is a UUID that the caller chooses and records before the call. A
+call with the handle of a running scheduler starts nothing and returns that
+handle, so these calls may be repeated after a transport error.
+
 A sequenced request is never repeated after a transport error, because the
 daemon may already have run it. The documents in `mina_sdk::itn::queries`
 are those of `spec/itn-operations.graphql`, which mina-sdk-spec validates
