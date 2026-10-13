@@ -53,6 +53,21 @@ pub struct DaemonStatus {
     pub coinbase_receiver: Option<String>,
     pub peers: Option<Vec<PeerInfo>>,
     pub addrs_and_ports: Option<AddrsAndPorts>,
+    /// Global slot since genesis of the best tip.
+    pub global_slot_since_genesis_best_tip: Option<u64>,
+    /// The consensus time of now, on the daemon's clock.
+    pub consensus_time_now: Option<ConsensusTime>,
+}
+
+/// A consensus time: an epoch and slot with the slot's wall-clock bounds
+/// (milliseconds since the Unix epoch, as decimal strings).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConsensusTime {
+    pub epoch: u64,
+    pub slot: u64,
+    pub global_slot: u64,
+    pub start_time: String,
+    pub end_time: String,
 }
 
 /// The daemon's network addresses and ports.
@@ -62,6 +77,8 @@ pub struct AddrsAndPorts {
     pub bind_ip: String,
     pub client_port: i64,
     pub libp2p_port: i64,
+    /// The daemon's own libp2p peer, when it has one.
+    pub peer: Option<PeerInfo>,
 }
 
 /// Daemon metrics (`daemonStatus.metrics`).
@@ -163,6 +180,27 @@ pub struct BlockInfo {
     pub coinbase_receiver_account: Option<String>,
     pub fee_transfers: Vec<FeeTransfer>,
     pub user_commands: Vec<BlockTransaction>,
+    /// The zkApp commands in the block, with their account updates.
+    pub zkapp_commands: Vec<BlockZkappCommand>,
+    /// The completed SNARK work in the block.
+    pub snark_jobs: Vec<CompletedWork>,
+}
+
+/// A zkApp command in a block.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BlockZkappCommand {
+    pub id: String,
+    pub hash: String,
+    pub memo: String,
+    pub fee_payer: ZkappFeePayer,
+    /// The fee payer's signature.
+    pub fee_payer_authorization: String,
+    /// The account updates as the daemon reports them (spec/SPEC.md
+    /// "AccountUpdate"), kept as JSON.
+    pub account_updates: Vec<serde_json::Value>,
+    /// One entry for each failing account update; `None` if the command did
+    /// not fail.
+    pub failure_reason: Option<Vec<ZkappFailure>>,
 }
 
 /// Epoch data of a block's consensus state.
@@ -322,6 +360,9 @@ pub struct Payment {
     pub fee: Currency,
     pub memo: Option<String>,
     pub nonce: Option<u64>,
+    /// Last global slot (since genesis) the command is valid in. A command
+    /// signed with one must be sent with the same value.
+    pub valid_until: Option<u64>,
     /// A signature made outside the daemon; `None` lets the daemon sign with
     /// its keystore.
     pub signature: Option<SignatureInput>,
@@ -337,6 +378,7 @@ impl Payment {
             fee: Currency::from_nanomina(0),
             memo: None,
             nonce: None,
+            valid_until: None,
             signature: None,
         }
     }
@@ -371,6 +413,12 @@ impl Payment {
         self
     }
 
+    /// Set the last global slot (since genesis) the command is valid in.
+    pub fn valid_until(mut self, valid_until: u64) -> Self {
+        self.valid_until = Some(valid_until);
+        self
+    }
+
     /// Send with a signature made outside the daemon.
     pub fn signature(mut self, signature: SignatureInput) -> Self {
         self.signature = Some(signature);
@@ -395,6 +443,9 @@ pub struct Delegation {
     pub fee: Currency,
     pub memo: Option<String>,
     pub nonce: Option<u64>,
+    /// Last global slot (since genesis) the command is valid in. A command
+    /// signed with one must be sent with the same value.
+    pub valid_until: Option<u64>,
     /// A signature made outside the daemon; `None` lets the daemon sign with
     /// its keystore.
     pub signature: Option<SignatureInput>,
@@ -409,6 +460,7 @@ impl Delegation {
             fee: Currency::from_nanomina(0),
             memo: None,
             nonce: None,
+            valid_until: None,
             signature: None,
         }
     }
@@ -437,6 +489,12 @@ impl Delegation {
         self
     }
 
+    /// Set the last global slot (since genesis) the command is valid in.
+    pub fn valid_until(mut self, valid_until: u64) -> Self {
+        self.valid_until = Some(valid_until);
+        self
+    }
+
     /// Send with a signature made outside the daemon.
     pub fn signature(mut self, signature: SignatureInput) -> Self {
         self.signature = Some(signature);
@@ -453,6 +511,15 @@ pub struct PooledUserCommand {
     pub nonce: String,
     pub amount: String,
     pub fee: String,
+    /// Last global slot (since genesis) the command is valid in.
+    #[serde(default)]
+    pub valid_until: Option<String>,
+    /// The token the command moves.
+    #[serde(default)]
+    pub token: String,
+    /// The token the fee is paid in.
+    #[serde(default)]
+    pub fee_token: String,
     pub from: String,
     pub to: String,
     #[serde(default)]

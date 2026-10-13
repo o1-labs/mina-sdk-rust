@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0-rc.2] - unreleased
+
+### Added
+- `spec/` is mina-sdk-spec v0.4.0-rc.2. `BlockInfo` gets `zkapp_commands`
+  (`BlockZkappCommand`: fee payer, failure reason and the account updates as
+  `serde_json::Value`) and `snark_jobs` (`CompletedWork`); `DaemonStatus`
+  gets `global_slot_since_genesis_best_tip`, `consensus_time_now`
+  (`ConsensusTime`) and `addrs_and_ports.peer`; `PooledUserCommand` gets
+  `valid_until`, `token` and `fee_token`. These are the fields mina-frontend
+  reads.
+- `Payment` and `Delegation` take `valid_until` (field and builder method),
+  so that a command signed with one can be sent as signed.
+
 ## [0.4.0-rc.1] - 2026-10-12
 
 From this release on, the four Mina SDKs and mina-sdk-spec have the same
