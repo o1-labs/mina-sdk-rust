@@ -31,7 +31,7 @@ tokio = { version = "1", features = ["rt", "time"] }
 tracing = "0.1"
 ed25519-dalek = { version = "3", optional = true }
 base64 = { version = "0.23", optional = true }
-getrandom = { version = "0.2", optional = true }
+getrandom = { version = "0.4", optional = true }
 
 [dev-dependencies]
 wiremock = "0.6"
