@@ -24,7 +24,7 @@ Rust SDK for interacting with [Mina Protocol](https://minaprotocol.com) nodes vi
 
 ```toml
 [dependencies]
-mina-sdk = "0.4.0-rc.1"
+mina-sdk = "0.4.0-rc.2"
 ```
 
 ## Quick Start
@@ -139,7 +139,7 @@ each request with an ed25519 `ItnKey` whose public half must be in
 a daemon restart, HTTP 412).
 
 ```toml
-mina-sdk = { version = "0.4.0-rc.1", features = ["itn"] }
+mina-sdk = { version = "0.4.0-rc.2", features = ["itn"] }
 ```
 
 ```rust

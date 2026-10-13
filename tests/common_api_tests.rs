@@ -372,3 +372,95 @@ async fn test_transaction_status_and_small_queries() {
         Value::Null
     );
 }
+
+#[tokio::test]
+async fn test_block_zkapp_commands_and_snark_jobs() {
+    let mut block = block_json();
+    block["snarkJobs"] = json!([{ "prover": "B62qprover", "fee": "1000", "workIds": ["7", 8] }]);
+    let update = json!({
+        "authorization": { "signature": "sig", "proof": null },
+        "body": { "publicKey": "B62qzk", "balanceChange": { "magnitude": "5", "sgn": "Negative" } }
+    });
+    block["transactions"]["zkappCommands"] = json!([{
+        "id": "zkid", "hash": "zkhash",
+        "failureReason": [{ "index": "1", "failures": ["Cancelled"] }],
+        "zkappCommand": {
+            "memo": "E4Y",
+            "feePayer": { "authorization": "sig", "body": { "publicKey": "B62qfp", "fee": "100", "nonce": 3, "validUntil": null } },
+            "accountUpdates": [update.clone()]
+        }
+    }]);
+    let (client, _server) = mock("query Block(", json!({ "block": block })).await;
+    let info = client.get_block(BlockRef::Height(12)).await.unwrap();
+    assert_eq!(info.snark_jobs.len(), 1);
+    assert_eq!(info.snark_jobs[0].prover, "B62qprover");
+    assert_eq!(info.snark_jobs[0].work_ids, vec![7, 8]);
+    assert_eq!(info.zkapp_commands.len(), 1);
+    let z = &info.zkapp_commands[0];
+    assert_eq!(z.id, "zkid");
+    assert_eq!(z.memo, "E4Y");
+    assert_eq!(z.fee_payer.public_key, "B62qfp");
+    assert_eq!(z.fee_payer.nonce, 3);
+    assert_eq!(z.fee_payer.valid_until, None);
+    assert_eq!(z.fee_payer_authorization, "sig");
+    assert_eq!(z.account_updates, vec![update]);
+    let failures = z.failure_reason.as_ref().unwrap();
+    assert_eq!(failures[0].index, Some(1));
+    assert_eq!(failures[0].failures, vec!["Cancelled"]);
+
+    // Without the fields (an older daemon, or a block without zkApps) the
+    // lists are empty.
+    let (client, _server) = mock("query Block(", json!({ "block": block_json() })).await;
+    let info = client.get_block(BlockRef::Height(12)).await.unwrap();
+    assert!(info.zkapp_commands.is_empty());
+    assert!(info.snark_jobs.is_empty());
+}
+
+#[tokio::test]
+async fn test_daemon_status_consensus_time_and_peer() {
+    let (client, _server) = mock(
+        "query DaemonStatus",
+        json!({ "daemonStatus": {
+            "syncStatus": "SYNCED", "stateHash": "3NK", "commitId": "abc", "peers": [],
+            "globalSlotSinceGenesisBestTip": "4200",
+            "consensusTimeNow": { "epoch": "1", "slot": "5", "globalSlot": "4201", "startTime": "1700000000000", "endTime": "1700000020000" },
+            "addrsAndPorts": {
+                "externalIp": "10.0.0.1", "bindIp": "0.0.0.0", "clientPort": 8301, "libp2pPort": 8302,
+                "peer": { "host": "10.0.0.1", "libp2pPort": 8302, "peerId": "12D3KooW" }
+            }
+        }}),
+    )
+    .await;
+    let status = client.get_daemon_status().await.unwrap();
+    assert_eq!(status.global_slot_since_genesis_best_tip, Some(4200));
+    assert_eq!(
+        status.consensus_time_now,
+        Some(ConsensusTime {
+            epoch: 1,
+            slot: 5,
+            global_slot: 4201,
+            start_time: "1700000000000".into(),
+            end_time: "1700000020000".into(),
+        })
+    );
+    let peer = status.addrs_and_ports.unwrap().peer.unwrap();
+    assert_eq!(peer.peer_id, "12D3KooW");
+    assert_eq!(peer.port, 8302);
+}
+
+#[tokio::test]
+async fn test_pooled_user_commands_tokens() {
+    let (client, _server) = mock(
+        "query PooledUserCommands",
+        json!({ "pooledUserCommands": [{
+            "id": "i", "hash": "h", "kind": "PAYMENT", "nonce": 1, "amount": "1", "fee": "1",
+            "validUntil": "4294967295", "token": "wSHV2S", "feeToken": "wSHV2S", "from": "a", "to": "b",
+            "source": { "publicKey": "a" }, "receiver": { "publicKey": "b" }, "memo": "", "failureReason": null
+        }]}),
+    )
+    .await;
+    let cmds = client.get_pooled_user_commands(None).await.unwrap();
+    assert_eq!(cmds[0].valid_until.as_deref(), Some("4294967295"));
+    assert_eq!(cmds[0].token, "wSHV2S");
+    assert_eq!(cmds[0].fee_token, "wSHV2S");
+}

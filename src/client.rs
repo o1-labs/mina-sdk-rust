@@ -264,6 +264,20 @@ impl MinaClient {
                 bind_ip: str_or_empty(&addrs["bindIp"]),
                 client_port: addrs["clientPort"].as_i64().unwrap_or_default(),
                 libp2p_port: addrs["libp2pPort"].as_i64().unwrap_or_default(),
+                peer: addrs["peer"]
+                    .is_object()
+                    .then(|| parse_peer(&addrs["peer"])),
+            }),
+            global_slot_since_genesis_best_tip: opt_u64(&status["globalSlotSinceGenesisBestTip"]),
+            consensus_time_now: status["consensusTimeNow"].is_object().then(|| {
+                let n = &status["consensusTimeNow"];
+                ConsensusTime {
+                    epoch: parse_u64(&n["epoch"]),
+                    slot: parse_u64(&n["slot"]),
+                    global_slot: parse_u64(&n["globalSlot"]),
+                    start_time: scalar_string(&n["startTime"]),
+                    end_time: scalar_string(&n["endTime"]),
+                }
             }),
         })
     }
@@ -460,6 +474,13 @@ impl MinaClient {
                         nonce: scalar_string(&c["nonce"]),
                         amount: scalar_string(&c["amount"]),
                         fee: scalar_string(&c["fee"]),
+                        valid_until: if c["validUntil"].is_null() {
+                            None
+                        } else {
+                            Some(scalar_string(&c["validUntil"]))
+                        },
+                        token: str_or_empty(&c["token"]),
+                        fee_token: str_or_empty(&c["feeToken"]),
                         from: str_or_empty(&c["from"]),
                         to: str_or_empty(&c["to"]),
                         source: str_or_empty(&c["source"]["publicKey"]),
@@ -842,6 +863,48 @@ fn parse_block(block: &Value) -> Result<BlockInfo> {
                     .collect::<Result<Vec<_>>>()
             })
             .transpose()?
+            .unwrap_or_default(),
+        zkapp_commands: txs["zkappCommands"]
+            .as_array()
+            .map(|a| a.iter().map(parse_block_zkapp).collect::<Result<Vec<_>>>())
+            .transpose()?
+            .unwrap_or_default(),
+        snark_jobs: block["snarkJobs"]
+            .as_array()
+            .map(|a| {
+                a.iter()
+                    .map(parse_completed_work)
+                    .collect::<Result<Vec<_>>>()
+            })
+            .transpose()?
+            .unwrap_or_default(),
+    })
+}
+
+fn parse_block_zkapp(z: &Value) -> Result<BlockZkappCommand> {
+    let result = parse_zkapp_result(z)?;
+    let command = &z["zkappCommand"];
+    Ok(BlockZkappCommand {
+        id: result.id,
+        hash: result.hash,
+        memo: result.memo,
+        fee_payer: result.fee_payer,
+        fee_payer_authorization: str_or_empty(&command["feePayer"]["authorization"]),
+        account_updates: command["accountUpdates"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default(),
+        failure_reason: result.failure_reason,
+    })
+}
+
+fn parse_completed_work(w: &Value) -> Result<CompletedWork> {
+    Ok(CompletedWork {
+        prover: str_or_empty(&w["prover"]),
+        fee: opt_currency(&w["fee"])?.unwrap_or(Currency::from_nanomina(0)),
+        work_ids: w["workIds"]
+            .as_array()
+            .map(|a| a.iter().map(parse_i64).collect())
             .unwrap_or_default(),
     })
 }
