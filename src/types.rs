@@ -360,6 +360,9 @@ pub struct Payment {
     pub fee: Currency,
     pub memo: Option<String>,
     pub nonce: Option<u64>,
+    /// Last global slot (since genesis) the command is valid in. A command
+    /// signed with one must be sent with the same value.
+    pub valid_until: Option<u64>,
     /// A signature made outside the daemon; `None` lets the daemon sign with
     /// its keystore.
     pub signature: Option<SignatureInput>,
@@ -375,6 +378,7 @@ impl Payment {
             fee: Currency::from_nanomina(0),
             memo: None,
             nonce: None,
+            valid_until: None,
             signature: None,
         }
     }
@@ -409,6 +413,12 @@ impl Payment {
         self
     }
 
+    /// Set the last global slot (since genesis) the command is valid in.
+    pub fn valid_until(mut self, valid_until: u64) -> Self {
+        self.valid_until = Some(valid_until);
+        self
+    }
+
     /// Send with a signature made outside the daemon.
     pub fn signature(mut self, signature: SignatureInput) -> Self {
         self.signature = Some(signature);
@@ -433,6 +443,9 @@ pub struct Delegation {
     pub fee: Currency,
     pub memo: Option<String>,
     pub nonce: Option<u64>,
+    /// Last global slot (since genesis) the command is valid in. A command
+    /// signed with one must be sent with the same value.
+    pub valid_until: Option<u64>,
     /// A signature made outside the daemon; `None` lets the daemon sign with
     /// its keystore.
     pub signature: Option<SignatureInput>,
@@ -447,6 +460,7 @@ impl Delegation {
             fee: Currency::from_nanomina(0),
             memo: None,
             nonce: None,
+            valid_until: None,
             signature: None,
         }
     }
@@ -472,6 +486,12 @@ impl Delegation {
     /// Set an explicit nonce (otherwise the daemon picks the next nonce).
     pub fn nonce(mut self, nonce: u64) -> Self {
         self.nonce = Some(nonce);
+        self
+    }
+
+    /// Set the last global slot (since genesis) the command is valid in.
+    pub fn valid_until(mut self, valid_until: u64) -> Self {
+        self.valid_until = Some(valid_until);
         self
     }
 

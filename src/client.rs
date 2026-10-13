@@ -638,6 +638,9 @@ impl MinaClient {
         if let Some(n) = payment.nonce {
             input["nonce"] = Value::String(n.to_string());
         }
+        if let Some(v) = payment.valid_until {
+            input["validUntil"] = Value::String(v.to_string());
+        }
         let vars = json!({ "input": input, "signature": signature_json(&payment.signature) });
         let data = self
             .execute_query(queries::SEND_PAYMENT, Some(vars), "send_payment")
@@ -660,6 +663,9 @@ impl MinaClient {
         }
         if let Some(n) = delegation.nonce {
             input["nonce"] = Value::String(n.to_string());
+        }
+        if let Some(v) = delegation.valid_until {
+            input["validUntil"] = Value::String(v.to_string());
         }
         let vars = json!({ "input": input, "signature": signature_json(&delegation.signature) });
         let data = self

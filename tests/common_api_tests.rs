@@ -464,3 +464,34 @@ async fn test_pooled_user_commands_tokens() {
     assert_eq!(cmds[0].token, "wSHV2S");
     assert_eq!(cmds[0].fee_token, "wSHV2S");
 }
+
+#[tokio::test]
+async fn test_send_payment_and_delegation_send_valid_until() {
+    let (client, server) = mock(
+        "mutation SendPayment",
+        json!({ "sendPayment": { "payment": { "id": "i", "hash": "h", "nonce": 1 } } }),
+    )
+    .await;
+    let payment = Payment::sender("a")
+        .to("b")
+        .amount(Currency::from_nanomina(1))
+        .fee(Currency::from_nanomina(1))
+        .valid_until(4294967295);
+    client.send_payment(payment).await.unwrap();
+    assert_eq!(
+        sent_variables(&server).await["input"]["validUntil"],
+        "4294967295"
+    );
+
+    let (client, server) = mock(
+        "mutation SendDelegation",
+        json!({ "sendDelegation": { "delegation": { "id": "i", "hash": "h", "nonce": 1 } } }),
+    )
+    .await;
+    let delegation = Delegation::sender("a")
+        .to("b")
+        .fee(Currency::from_nanomina(1))
+        .valid_until(42);
+    client.send_delegation(delegation).await.unwrap();
+    assert_eq!(sent_variables(&server).await["input"]["validUntil"], "42");
+}

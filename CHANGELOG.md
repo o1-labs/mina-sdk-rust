@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
   (`ConsensusTime`) and `addrs_and_ports.peer`; `PooledUserCommand` gets
   `valid_until`, `token` and `fee_token`. These are the fields mina-frontend
   reads.
+- `Payment` and `Delegation` take `valid_until` (field and builder method),
+  so that a command signed with one can be sent as signed.
 
 ## [0.4.0-rc.1] - 2026-10-12
 
