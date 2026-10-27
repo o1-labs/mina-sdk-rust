@@ -43,6 +43,16 @@ jobs:
       - name: Run unit tests (all features)
         run: cargo test --all-features --lib --tests -- --skip integration
 
+      - name: Clippy (rustls, no OpenSSL)
+        run: cargo clippy --all-targets --no-default-features --features rustls-tls,itn -- -D warnings
+
+      - name: rustls builds without OpenSSL
+        run: |
+          if cargo tree --no-default-features --features rustls-tls,itn -i openssl-sys >/dev/null 2>&1; then
+            cargo tree --no-default-features --features rustls-tls,itn -i openssl-sys
+            exit 1
+          fi
+
   spec:
     name: Specification copy
     runs-on: ubuntu-latest
@@ -69,6 +79,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          # the dependencies of every TLS choice, not only the default one
+          arguments: --all-features
 
   coverage:
     name: Code coverage
