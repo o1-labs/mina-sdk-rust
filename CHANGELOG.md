@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Features `native-tls` (default) and `rustls-tls` choose the TLS of
+  `https://` endpoints. With `default-features = false, features =
+  ["rustls-tls"]` the crate does not build or link OpenSSL. The default is
+  unchanged.
+
 ## [0.4.0-rc.2] - unreleased
 
 ### Added

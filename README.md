@@ -27,6 +27,21 @@ Rust SDK for interacting with [Mina Protocol](https://minaprotocol.com) nodes vi
 mina-sdk = "0.4.0-rc.2"
 ```
 
+### TLS
+
+`https://` endpoints use the system's OpenSSL (feature `native-tls`, on by
+default). To build without OpenSSL, for example for a static binary or a
+package that must not depend on one `libssl` version, use rustls with the
+Mozilla root certificates:
+
+```toml
+[dependencies]
+mina-sdk = { version = "0.4.0-rc.2", default-features = false, features = ["rustls-tls"] }
+```
+
+Without either feature the client speaks only `http://`, which is enough for
+a local daemon.
+
 ## Quick Start
 
 ```rust
