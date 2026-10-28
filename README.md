@@ -24,7 +24,7 @@ Rust SDK for interacting with [Mina Protocol](https://minaprotocol.com) nodes vi
 
 ```toml
 [dependencies]
-mina-sdk = "0.4.0-rc.2"
+mina-sdk = "0.4.0-rc.3"
 ```
 
 ### TLS
@@ -36,7 +36,7 @@ Mozilla root certificates:
 
 ```toml
 [dependencies]
-mina-sdk = { version = "0.4.0-rc.2", default-features = false, features = ["rustls-tls"] }
+mina-sdk = { version = "0.4.0-rc.3", default-features = false, features = ["rustls-tls"] }
 ```
 
 Without either feature the client speaks only `http://`, which is enough for
@@ -154,7 +154,7 @@ each request with an ed25519 `ItnKey` whose public half must be in
 a daemon restart, HTTP 412).
 
 ```toml
-mina-sdk = { version = "0.4.0-rc.2", features = ["itn"] }
+mina-sdk = { version = "0.4.0-rc.3", features = ["itn"] }
 ```
 
 ```rust

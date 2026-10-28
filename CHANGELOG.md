@@ -4,13 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0-rc.3] - 2026-10-27
+
+`spec/` stays mina-sdk-spec v0.4.0-rc.2: this release changes only the
+build of the crate, not the API.
+
 ### Added
 - Features `native-tls` (default) and `rustls-tls` choose the TLS of
   `https://` endpoints. With `default-features = false, features =
   ["rustls-tls"]` the crate does not build or link OpenSSL. The default is
   unchanged.
 
-## [0.4.0-rc.2] - unreleased
+## [0.4.0-rc.2] - 2026-10-13
 
 ### Added
 - `spec/` is mina-sdk-spec v0.4.0-rc.2. `BlockInfo` gets `zkapp_commands`
