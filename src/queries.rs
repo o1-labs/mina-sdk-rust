@@ -71,6 +71,36 @@ pub const DAEMON_METRICS: &str = r#"query DaemonMetrics {
   }
 }"#;
 
+/// Bootstrap progress: phase, attempts and ledger syncs (daemon 4.0.4).
+pub const BOOTSTRAP_STATUS: &str = r#"query BootstrapStatus {
+  bootstrapStatus {
+    phase
+    phaseStartedAt
+    bootstrapStartedAt
+    bootstrapAttempts
+    lastAttemptFailure
+    ledgerSyncs {
+      ledger
+      target
+      active
+      progress {
+        targets
+        targetSetAt
+        pendingChildHashes
+        pendingContents
+        synced
+        answersAccepted
+        answersIgnored
+        answersRejected
+        lastAcceptedAnswerAt
+        numAccounts
+        accountsSettled
+        accountsReceived
+      }
+    }
+  }
+}"#;
+
 /// Network identifier.
 pub const NETWORK_ID: &str = r#"query NetworkId {
   networkID
@@ -877,6 +907,15 @@ pub const POOLED_ZKAPP_COMMANDS: &str = r#"query PooledZkappCommands($publicKey:
       index
       failures
     }
+  }
+}"#;
+
+/// Transaction pool size, capacity and minimum fee (daemon 4.0.4).
+pub const TRANSACTION_POOL_STATUS: &str = r#"query TransactionPoolStatus {
+  transactionPoolStatus {
+    size
+    maxSize
+    minimumFeePerWeightUnit
   }
 }"#;
 

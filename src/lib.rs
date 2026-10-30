@@ -101,6 +101,8 @@
 //! |--------|-------------|
 //! | [`MinaClient::get_sync_status`] | Node sync state (Synced, Bootstrap, etc.) |
 //! | [`MinaClient::get_daemon_status`] | Comprehensive daemon info |
+//! | [`MinaClient::get_bootstrap_status`] | Bootstrap phase, attempts and ledger syncs (daemon 4.0.4) |
+//! | [`MinaClient::get_transaction_pool_status`] | Transaction pool size, capacity and minimum fee (daemon 4.0.4) |
 //! | [`MinaClient::get_network_id`] | Network identifier string |
 //! | [`MinaClient::get_account`] | Account balance, nonce, delegate |
 //! | [`MinaClient::get_best_chain`] | Recent blocks from the best chain |
@@ -147,9 +149,10 @@ pub use currency::Currency;
 pub use error::{Error, Result};
 pub use types::{
     AccountBalance, AccountData, AccountPermissions, AccountTiming, AddrsAndPorts, BlockInfo,
-    BlockRef, BlockTransaction, BlockZkappCommand, CompletedWork, ConsensusTime, DaemonMetrics,
-    DaemonStatus, Delegation, EpochData, FeeTransfer, GenesisConstants, Payment, PeerInfo,
-    PooledUserCommand, SendDelegationResult, SendPaymentResult, SignatureInput, SubmittedCommand,
-    SyncStatus, TrackedAccount, TransactionRef, TransactionStatus, ZkappCommandResult,
-    ZkappFailure, ZkappFeePayer,
+    BlockRef, BlockTransaction, BlockZkappCommand, BootstrapPhase, BootstrapStatus, CompletedWork,
+    ConsensusTime, DaemonMetrics, DaemonStatus, Delegation, EpochData, FeeTransfer,
+    GenesisConstants, LedgerSync, LedgerSyncProgress, Payment, PeerInfo, PooledUserCommand,
+    SendDelegationResult, SendPaymentResult, SignatureInput, SubmittedCommand, SyncStatus,
+    SyncedLedger, TrackedAccount, TransactionPoolStatus, TransactionRef, TransactionStatus,
+    ZkappCommandResult, ZkappFailure, ZkappFeePayer,
 };
