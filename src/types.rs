@@ -95,6 +95,113 @@ pub struct DaemonMetrics {
     pub snark_pool_size: i64,
 }
 
+/// The phase of the daemon's bootstrap (`BootstrapStatus.phase`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum BootstrapPhase {
+    Starting,
+    WaitingForGenesis,
+    WaitingForPeers,
+    FetchingBestTip,
+    LoadingFrontier,
+    SyncingRootLedger,
+    DownloadingScanState,
+    BuildingStagedLedger,
+    SyncingEpochLedgers,
+    Participating,
+}
+
+impl std::fmt::Display for BootstrapPhase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Starting => write!(f, "STARTING"),
+            Self::WaitingForGenesis => write!(f, "WAITING_FOR_GENESIS"),
+            Self::WaitingForPeers => write!(f, "WAITING_FOR_PEERS"),
+            Self::FetchingBestTip => write!(f, "FETCHING_BEST_TIP"),
+            Self::LoadingFrontier => write!(f, "LOADING_FRONTIER"),
+            Self::SyncingRootLedger => write!(f, "SYNCING_ROOT_LEDGER"),
+            Self::DownloadingScanState => write!(f, "DOWNLOADING_SCAN_STATE"),
+            Self::BuildingStagedLedger => write!(f, "BUILDING_STAGED_LEDGER"),
+            Self::SyncingEpochLedgers => write!(f, "SYNCING_EPOCH_LEDGERS"),
+            Self::Participating => write!(f, "PARTICIPATING"),
+        }
+    }
+}
+
+/// Which ledger a [`LedgerSync`] synchronizes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum SyncedLedger {
+    RootSnarked,
+    StakingEpoch,
+    NextEpoch,
+}
+
+impl std::fmt::Display for SyncedLedger {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::RootSnarked => write!(f, "ROOT_SNARKED"),
+            Self::StakingEpoch => write!(f, "STAKING_EPOCH"),
+            Self::NextEpoch => write!(f, "NEXT_EPOCH"),
+        }
+    }
+}
+
+/// Bootstrap progress (`bootstrapStatus`, daemon 4.0.4).
+///
+/// Times are strings, as the daemon sends its `Time` scalar.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BootstrapStatus {
+    pub phase: BootstrapPhase,
+    /// When the current phase started.
+    pub phase_started_at: String,
+    /// When the bootstrap started; `None` before the first attempt.
+    pub bootstrap_started_at: Option<String>,
+    pub bootstrap_attempts: i64,
+    /// Why the last attempt failed, if one did.
+    pub last_attempt_failure: Option<String>,
+    pub ledger_syncs: Vec<LedgerSync>,
+}
+
+/// The synchronization of one ledger during bootstrap.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LedgerSync {
+    pub ledger: SyncedLedger,
+    /// The hash of the ledger being synchronized, once known.
+    pub target: Option<String>,
+    pub active: bool,
+    pub progress: LedgerSyncProgress,
+}
+
+/// Progress of a [`LedgerSync`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LedgerSyncProgress {
+    pub targets: i64,
+    pub target_set_at: Option<String>,
+    pub pending_child_hashes: i64,
+    pub pending_contents: i64,
+    pub synced: bool,
+    pub answers_accepted: i64,
+    pub answers_ignored: i64,
+    pub answers_rejected: i64,
+    pub last_accepted_answer_at: Option<String>,
+    pub num_accounts: Option<i64>,
+    pub accounts_settled: i64,
+    pub accounts_received: i64,
+}
+
+/// Transaction pool size, capacity and minimum fee (`transactionPoolStatus`,
+/// daemon 4.0.4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransactionPoolStatus {
+    pub size: i64,
+    pub max_size: i64,
+    /// Nanomina per weight unit, as a decimal integer or a fraction `n/d`;
+    /// `None` when the pool is empty. Once the pool is full, a new command
+    /// must pay strictly more. Payments and stake delegations have weight 1.
+    pub minimum_fee_per_weight_unit: Option<String>,
+}
+
 /// Account balance with total, liquid, and locked amounts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AccountBalance {

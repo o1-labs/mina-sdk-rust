@@ -159,6 +159,140 @@ async fn test_daemon_status_new_fields_and_metrics() {
 }
 
 #[tokio::test]
+async fn test_bootstrap_status() {
+    let (client, _s) = mock(
+        "BootstrapStatus",
+        json!({ "bootstrapStatus": {
+            "phase": "SYNCING_ROOT_LEDGER",
+            "phaseStartedAt": "2026-10-30 09:15:02.417000Z",
+            "bootstrapStartedAt": "2026-10-30 09:14:58.001000Z",
+            "bootstrapAttempts": 2,
+            "lastAttemptFailure": "Root ledger sync timed out",
+            "ledgerSyncs": [ {
+                "ledger": "ROOT_SNARKED",
+                "target": "jxroot",
+                "active": true,
+                "progress": {
+                    "targets": 1, "targetSetAt": "2026-10-30 09:15:02.417000Z",
+                    "pendingChildHashes": 12, "pendingContents": 3, "synced": false,
+                    "answersAccepted": 40, "answersIgnored": 2, "answersRejected": 1,
+                    "lastAcceptedAnswerAt": "2026-10-30 09:15:40.000000Z",
+                    "numAccounts": 1024, "accountsSettled": 700, "accountsReceived": 800
+                }
+            } ]
+        } }),
+    )
+    .await;
+    let b = client.get_bootstrap_status().await.unwrap();
+    assert_eq!(b.phase, BootstrapPhase::SyncingRootLedger);
+    assert_eq!(b.phase.to_string(), "SYNCING_ROOT_LEDGER");
+    assert_eq!(b.phase_started_at, "2026-10-30 09:15:02.417000Z");
+    assert_eq!(
+        b.bootstrap_started_at.as_deref(),
+        Some("2026-10-30 09:14:58.001000Z")
+    );
+    assert_eq!(b.bootstrap_attempts, 2);
+    assert_eq!(
+        b.last_attempt_failure.as_deref(),
+        Some("Root ledger sync timed out")
+    );
+    assert_eq!(b.ledger_syncs.len(), 1);
+    let l = &b.ledger_syncs[0];
+    assert_eq!(l.ledger, SyncedLedger::RootSnarked);
+    assert_eq!(l.target.as_deref(), Some("jxroot"));
+    assert!(l.active);
+    assert_eq!(
+        l.progress,
+        LedgerSyncProgress {
+            targets: 1,
+            target_set_at: Some("2026-10-30 09:15:02.417000Z".into()),
+            pending_child_hashes: 12,
+            pending_contents: 3,
+            synced: false,
+            answers_accepted: 40,
+            answers_ignored: 2,
+            answers_rejected: 1,
+            last_accepted_answer_at: Some("2026-10-30 09:15:40.000000Z".into()),
+            num_accounts: Some(1024),
+            accounts_settled: 700,
+            accounts_received: 800,
+        }
+    );
+
+    // A participating daemon: no attempt, no failure, no ledger syncs.
+    let (client, _s) = mock(
+        "BootstrapStatus",
+        json!({ "bootstrapStatus": {
+            "phase": "PARTICIPATING", "phaseStartedAt": "2026-10-30 09:20:00.000000Z",
+            "bootstrapStartedAt": null, "bootstrapAttempts": 0,
+            "lastAttemptFailure": null, "ledgerSyncs": []
+        } }),
+    )
+    .await;
+    let b = client.get_bootstrap_status().await.unwrap();
+    assert_eq!(b.phase, BootstrapPhase::Participating);
+    assert_eq!(b.bootstrap_started_at, None);
+    assert_eq!(b.last_attempt_failure, None);
+    assert!(b.ledger_syncs.is_empty());
+
+    // An unknown phase is a missing field.
+    let (client, _s) = mock(
+        "BootstrapStatus",
+        json!({ "bootstrapStatus": { "phase": "SOMETHING_NEW", "ledgerSyncs": [] } }),
+    )
+    .await;
+    assert!(matches!(
+        client.get_bootstrap_status().await,
+        Err(Error::MissingField { .. })
+    ));
+}
+
+#[tokio::test]
+async fn test_transaction_pool_status() {
+    let (client, _s) = mock(
+        "TransactionPoolStatus",
+        json!({ "transactionPoolStatus": {
+            "size": 1500, "maxSize": 3000, "minimumFeePerWeightUnit": "1000000/3"
+        } }),
+    )
+    .await;
+    let p = client.get_transaction_pool_status().await.unwrap();
+    assert_eq!((p.size, p.max_size), (1500, 3000));
+    assert_eq!(p.minimum_fee_per_weight_unit.as_deref(), Some("1000000/3"));
+
+    // An empty pool has no minimum fee.
+    let (client, _s) = mock(
+        "TransactionPoolStatus",
+        json!({ "transactionPoolStatus": {
+            "size": 0, "maxSize": 3000, "minimumFeePerWeightUnit": null
+        } }),
+    )
+    .await;
+    let p = client.get_transaction_pool_status().await.unwrap();
+    assert_eq!((p.size, p.max_size), (0, 3000));
+    assert_eq!(p.minimum_fee_per_weight_unit, None);
+
+    // An older daemon answers with a GraphQL error.
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "errors": [{ "message": "Cannot query field \"transactionPoolStatus\" on type \"query\"" }]
+        })))
+        .mount(&server)
+        .await;
+    let client = MinaClient::with_config(ClientConfig {
+        graphql_uri: format!("{}/graphql", server.uri()),
+        retries: 1,
+        retry_delay: Duration::from_millis(1),
+        timeout: Duration::from_secs(5),
+    });
+    assert!(matches!(
+        client.get_transaction_pool_status().await,
+        Err(Error::Graphql { .. })
+    ));
+}
+
+#[tokio::test]
 async fn test_account_sends_a_null_token_and_reads_new_fields() {
     let (client, server) = mock(
         "query Account",

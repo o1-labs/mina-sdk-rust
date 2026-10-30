@@ -104,6 +104,8 @@ that `spec/` is the tag's copy.
 | `get_sync_status()` | Node sync status (Synced, Bootstrap, etc.) |
 | `get_daemon_status()` | Daemon status: chain length, peers, addresses, block production keys |
 | `get_daemon_metrics()` | Transaction and snark pool metrics, block production delay |
+| `get_bootstrap_status()` | Bootstrap phase, attempts and ledger syncs (daemon 4.0.4) |
+| `get_transaction_pool_status()` | Transaction pool size, capacity and minimum fee per weight unit (daemon 4.0.4) |
 | `get_network_id()` | Network identifier |
 | `get_account(public_key, token_id)` | Balance, nonce, delegate, timing, permissions, zkApp state |
 | `get_best_chain(max_length)` | Recent blocks from the best chain |

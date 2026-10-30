@@ -310,6 +310,55 @@ impl MinaClient {
         })
     }
 
+    /// Get the bootstrap progress: phase, attempts and ledger syncs.
+    ///
+    /// Needs daemon 4.0.4; an older daemon answers with a GraphQL error.
+    pub async fn get_bootstrap_status(&self) -> Result<BootstrapStatus> {
+        const NAME: &str = "get_bootstrap_status";
+        let data = self
+            .execute_query(queries::BOOTSTRAP_STATUS, None, NAME)
+            .await?;
+        let b = &data["bootstrapStatus"];
+        if !b.is_object() {
+            return Err(missing(NAME, "bootstrapStatus"));
+        }
+        let phase: BootstrapPhase = serde_json::from_value(b["phase"].clone())
+            .map_err(|_| missing(NAME, "bootstrapStatus.phase"))?;
+        let ledger_syncs = b["ledgerSyncs"]
+            .as_array()
+            .map(|a| a.iter().map(|l| parse_ledger_sync(NAME, l)).collect())
+            .transpose()?
+            .unwrap_or_default();
+        Ok(BootstrapStatus {
+            phase,
+            phase_started_at: scalar_string(&b["phaseStartedAt"]),
+            bootstrap_started_at: opt_str(&b["bootstrapStartedAt"]),
+            bootstrap_attempts: parse_i64(&b["bootstrapAttempts"]),
+            last_attempt_failure: opt_str(&b["lastAttemptFailure"]),
+            ledger_syncs,
+        })
+    }
+
+    /// Get the transaction pool's size, capacity and minimum fee per weight
+    /// unit.
+    ///
+    /// Needs daemon 4.0.4; an older daemon answers with a GraphQL error.
+    pub async fn get_transaction_pool_status(&self) -> Result<TransactionPoolStatus> {
+        const NAME: &str = "get_transaction_pool_status";
+        let data = self
+            .execute_query(queries::TRANSACTION_POOL_STATUS, None, NAME)
+            .await?;
+        let p = &data["transactionPoolStatus"];
+        if !p.is_object() {
+            return Err(missing(NAME, "transactionPoolStatus"));
+        }
+        Ok(TransactionPoolStatus {
+            size: parse_i64(&p["size"]),
+            max_size: parse_i64(&p["maxSize"]),
+            minimum_fee_per_weight_unit: opt_str(&p["minimumFeePerWeightUnit"]),
+        })
+    }
+
     /// Get the network identifier.
     pub async fn get_network_id(&self) -> Result<String> {
         let data = self
@@ -793,6 +842,35 @@ fn parse_peer(p: &Value) -> PeerInfo {
         host: str_or_empty(&p["host"]),
         port: p["libp2pPort"].as_i64().unwrap_or_default(),
     }
+}
+
+fn parse_ledger_sync(query_name: &str, l: &Value) -> Result<LedgerSync> {
+    let ledger: SyncedLedger = serde_json::from_value(l["ledger"].clone())
+        .map_err(|_| missing(query_name, "ledgerSyncs.ledger"))?;
+    let p = &l["progress"];
+    if !p.is_object() {
+        return Err(missing(query_name, "ledgerSyncs.progress"));
+    }
+    let n = |field: &str| parse_i64(&p[field]);
+    Ok(LedgerSync {
+        ledger,
+        target: opt_str(&l["target"]),
+        active: l["active"].as_bool().unwrap_or_default(),
+        progress: LedgerSyncProgress {
+            targets: n("targets"),
+            target_set_at: opt_str(&p["targetSetAt"]),
+            pending_child_hashes: n("pendingChildHashes"),
+            pending_contents: n("pendingContents"),
+            synced: p["synced"].as_bool().unwrap_or_default(),
+            answers_accepted: n("answersAccepted"),
+            answers_ignored: n("answersIgnored"),
+            answers_rejected: n("answersRejected"),
+            last_accepted_answer_at: opt_str(&p["lastAcceptedAnswerAt"]),
+            num_accounts: p["numAccounts"].as_i64(),
+            accounts_settled: n("accountsSettled"),
+            accounts_received: n("accountsReceived"),
+        },
+    })
 }
 
 fn parse_epoch(e: &Value) -> EpochData {

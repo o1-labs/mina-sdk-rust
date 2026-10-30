@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `spec/` is mina-sdk-spec v0.4.0-rc.3: `get_bootstrap_status`
+  (`BootstrapStatus`, `BootstrapPhase`, `LedgerSync`, `SyncedLedger`,
+  `LedgerSyncProgress`) and `get_transaction_pool_status`
+  (`TransactionPoolStatus`). Both need daemon 4.0.4; an older daemon answers
+  them with a GraphQL error.
+
 ## [0.4.0-rc.3] - 2026-10-27
 
 `spec/` stays mina-sdk-spec v0.4.0-rc.2: this release changes only the
